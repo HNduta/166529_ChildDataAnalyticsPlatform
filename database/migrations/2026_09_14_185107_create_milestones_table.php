@@ -1,0 +1,39 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('milestones', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('goal_id')
+                ->constrained('therapy_goals')
+                ->cascadeOnDelete();
+
+            $table->foreignId('child_id')
+                ->constrained('children')
+                ->cascadeOnDelete();
+
+            $table->text('milestone_description');
+            $table->date('date_achieved')->nullable();
+            $table->boolean('achieved_flag')->default(false);
+
+            $table->foreignId('recorded_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('milestones');
+    }
+};
