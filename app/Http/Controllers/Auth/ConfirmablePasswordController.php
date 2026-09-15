@@ -35,6 +35,11 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return match ($request->user()->role) {
+        'caregiver' => redirect()->intended(route('caregiver.dashboard')),
+        'clinician' => redirect()->intended(route('clinician.dashboard')),
+        'administrator' => redirect()->intended(route('administrator.dashboard')),
+        default => abort(403, 'Invalid user role.'),
+        };
     }
 }

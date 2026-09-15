@@ -22,6 +22,11 @@ class VerifyEmailController extends Controller
             event(new Verified($request->user()));
         }
 
-        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        return match ($request->user()->role) {
+        'caregiver' => redirect()->intended(route('caregiver.dashboard').'?verified=1'),
+        'clinician' => redirect()->intended(route('clinician.dashboard').'?verified=1'),
+        'administrator' => redirect()->intended(route('administrator.dashboard').'?verified=1'),
+        default => abort(403, 'Invalid user role.'),
+        };
     }
 }

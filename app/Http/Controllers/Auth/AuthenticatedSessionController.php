@@ -28,7 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return match ($request->user()->role) {
+        'caregiver' => redirect()->intended(route('caregiver.dashboard')),
+        'clinician' => redirect()->intended(route('clinician.dashboard')),
+        'administrator' => redirect()->intended(route('administrator.dashboard')),
+        default => abort(403, 'Invalid user role.'),
+        };
     }
 
     /**
