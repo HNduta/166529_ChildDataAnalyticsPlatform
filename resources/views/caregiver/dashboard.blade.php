@@ -142,22 +142,70 @@
                 </label>
             </div>
 
-            <div class="ml-auto flex items-center gap-4">
-                <button class="relative w-9 h-9 rounded-lg border border-[var(--line)] flex items-center justify-center" aria-label="Notifications">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 21a2 2 0 004 0"/></svg>
-                </button>
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{-- DATA: auth()->user() initials --}}
-                        CG
-                    </div>
-                    <div class="hidden sm:block leading-tight">
-                        {{-- DATA: auth()->user()->name --}}
-                        <p class="text-[13px] font-semibold">Caregiver</p>
-                        <p class="text-[11px] text-[var(--ink-soft)]">Caregiver</p>
-                    </div>
-                </div>
-            </div>
+            <div class="ml-auto flex items-center gap-3">
+
+    {{-- Notifications --}}
+    <button
+        type="button"
+        class="relative w-9 h-9 rounded-lg border border-[var(--line)] flex items-center justify-center"
+        aria-label="Notifications">
+
+        <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true">
+
+            <path d="M6 8a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"/>
+            <path d="M10 21a2 2 0 004 0"/>
+
+        </svg>
+
+    </button>
+
+
+    {{-- User Information --}}
+    <div class="flex items-center gap-2.5">
+
+        <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
+
+            {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+
+        </div>
+
+        <div class="hidden sm:block leading-tight">
+
+            <p class="text-[13px] font-semibold">
+                {{ auth()->user()->name }}
+            </p>
+
+            <p class="text-[11px] text-[var(--ink-soft)]">
+                {{ ucfirst(auth()->user()->role) }}
+            </p>
+
+        </div>
+
+    </div>
+
+
+    {{-- Logout --}}
+    <form method="POST" action="{{ route('logout') }}">
+
+        @csrf
+
+        <button
+            type="submit"
+            class="text-[13px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] transition whitespace-nowrap">
+
+            Logout
+
+        </button>
+
+    </form>
+
+</div>
         </header>
 
         <main class="px-4 sm:px-8 py-6 grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
