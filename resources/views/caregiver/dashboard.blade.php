@@ -11,12 +11,14 @@
 
     <style>
         :root{
-            --ink:#2f4f3a;
-            --ink-soft:#6b7d70;
-            --line:#dde5df;
+            --ink:#12735A;
+            --ink-soft:#6f6a62;
+            --line:#e6dfd4;
             --surface:#ffffff;
-            --canvas:#f3f6f3;
-            --accent:#2f4f3a;
+            --canvas:#faf6f0;
+            --accent:#e8845c;
+            --accent-soft:#f4b79c;
+            --accent-tint:#fdf1ea;
             --amber-bg:#fdf6e9;
             --amber-line:#f1e2bd;
             --amber-ink:#8a6d1d;
@@ -28,7 +30,7 @@
         .skel{
             position:relative;
             overflow:hidden;
-            background:#eceef1;
+            background:#efe7dc;
             border-radius:8px;
         }
         .skel::after{
@@ -42,11 +44,13 @@
         @keyframes shimmer{ 100%{ transform:translateX(100%); } }
 
         .scrollbar-thin::-webkit-scrollbar{ width:6px; }
-        .scrollbar-thin::-webkit-scrollbar-thumb{ background:#d8d8dc; border-radius:999px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb{ background:#e6dfd4; border-radius:999px; }
 
-        .navlink{ display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; font-size:14px; color:#45464d; font-weight:500; }
-        .navlink:hover{ background:#f1f1f3; color:var(--ink); }
+        .navlink{ display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; font-size:14px; color:#5b574f; font-weight:500; }
+        .navlink:hover{ background:#f3ede3; color:var(--ink); }
         .navlink.active{ background:var(--ink); color:#fff; }
+
+        button:focus-visible, a:focus-visible, input:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -197,7 +201,7 @@
 
         <button
             type="submit"
-            class="text-[13px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] transition whitespace-nowrap">
+            class="text-[13px] font-semibold text-[var(--accent)] hover:underline transition whitespace-nowrap">
 
             Logout
 
@@ -226,47 +230,206 @@
                                 Your dashboard is set up and ready. Once child profiles and observations are added, a summary will appear here.
                             </p>
                             <div class="flex flex-wrap items-center gap-3">
-                                <a href="#" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg">
+                                <a href="#" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
                                     <span class="text-base leading-none">+</span> Log Observation
                                 </a>
-                                <a href="#" class="inline-flex items-center gap-1.5 border border-[var(--line)] text-sm font-semibold px-4 py-2.5 rounded-lg">
+                                <a href="#" class="inline-flex items-center gap-1.5 border border-[var(--accent-soft)] text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">
                                     View Analytics
                                 </a>
                             </div>
                         </div>
-                        <div class="hidden sm:block bg-[var(--canvas)] skel"></div>
+                        <div class="hidden sm:block bg-[var(--accent-tint)] skel"></div>
                     </div>
                 </section>
 
                 {{-- Child Profiles --}}
                 <section>
-                    <div class="flex items-end justify-between mb-3">
+    <div class="flex items-end justify-between mb-3">
+        <div>
+            <h2 class="text-lg font-bold tracking-tight">Child Profiles</h2>
+            <p class="text-[13px] text-[var(--ink-soft)]">
+                Select a child to view their profile and developmental information.
+            </p>
+        </div>
+
+        <a
+            href="{{ route('children.create') }}"
+            class="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-semibold border border-[var(--accent-soft)] text-[var(--accent)] bg-white px-3.5 py-2 rounded-lg hover:bg-[var(--accent-tint)] transition"
+        >
+            <span class="text-base leading-none">+</span>
+            Add Profile
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {{-- Display children belonging to the authenticated caregiver --}}
+        @forelse(auth()->user()->children()->latest()->get() as $child)
+
+            {{-- Individual child card --}}
+            <a
+                href="{{ route('children.show', $child) }}"
+                class="block bg-white border border-[var(--line)] rounded-2xl p-5 hover:border-[var(--accent-soft)] hover:shadow-sm transition"
+            >
+
+                <div class="flex items-start justify-between gap-4">
+
+                    <div class="flex items-center gap-3">
+
+                        {{-- Child avatar --}}
+                        <div class="w-12 h-12 shrink-0 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center">
+
+                            <svg
+                                class="w-5 h-5 text-[var(--accent)]"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
+                            </svg>
+
+                        </div>
+
                         <div>
-                            <h2 class="text-lg font-bold tracking-tight">Child Profiles</h2>
-                            <p class="text-[13px] text-[var(--ink-soft)]">Quick summary of current activities and weekly progress.</p>
+                            <h3 class="text-[15px] font-bold tracking-tight">
+                                {{ $child->first_name }}
+                            </h3>
+
+                            <p class="text-[12px] text-[var(--ink-soft)]">
+                                {{ $child->age_in_months >= 12
+                                    ? floor($child->age_in_months / 12) . ' years' .
+                                      ($child->age_in_months % 12 > 0
+                                          ? ', ' . ($child->age_in_months % 12) . ' months'
+                                          : '')
+                                    : $child->age_in_months . ' months'
+                                }}
+                            </p>
                         </div>
-                        <button class="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-semibold border border-[var(--line)] bg-white px-3.5 py-2 rounded-lg">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M6 12h12M9 18h6"/></svg>
-                            Manage Profiles
-                        </button>
+
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {{-- DATA: @foreach($childProfiles as $child) ... @endforeach --}}
+                    {{-- Diagnosis status --}}
+                    @if($child->diagnosis_confirmed)
+                        <span class="text-[10px] font-semibold bg-[var(--ink)] text-white px-2 py-1 rounded-full whitespace-nowrap">
+                            ASD Confirmed
+                        </span>
+                    @endif
 
-                        {{-- Empty state: no child profiles yet --}}
-                        <div class="sm:col-span-2 border border-dashed border-[var(--line)] rounded-2xl bg-white p-8 text-center">
-                            <div class="w-11 h-11 mx-auto rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center mb-3">
-                                <svg class="w-5 h-5 text-[var(--ink-soft)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-                            </div>
-                            <p class="text-sm font-semibold mb-1">No child profiles yet</p>
-                            <p class="text-[13px] text-[var(--ink-soft)] mb-4">Add a profile to start tracking observations and progress.</p>
-                            <a href="#" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2 rounded-lg">
-                                <span class="text-base leading-none">+</span> Add Profile
-                            </a>
-                        </div>
+                </div>
+
+                {{-- Progress placeholder --}}
+                <div class="mt-5">
+
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[12px] text-[var(--ink-soft)]">
+                            Weekly Goal Progress
+                        </span>
+
+                        <span class="text-[12px] text-[var(--ink-soft)]">
+                            —
+                        </span>
                     </div>
-                </section>
+
+                    <div class="h-2 w-full rounded-full bg-[var(--canvas)] border border-[var(--line)] overflow-hidden">
+                        <div class="h-full w-0 rounded-full bg-[var(--ink)]"></div>
+                    </div>
+
+                </div>
+
+                {{-- View profile indicator --}}
+                <div class="mt-4 pt-3 border-t border-[var(--line)] flex items-center justify-between">
+
+                    <span class="text-[11px] uppercase tracking-wide text-[var(--accent)] font-semibold">
+                        View Profile
+                    </span>
+
+                    <svg
+                        class="w-4 h-4 text-[var(--accent)]"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                    >
+                        <path d="M5 12h14"/>
+                        <path d="M13 6l6 6-6 6"/>
+                    </svg>
+
+                </div>
+
+            </a>
+
+        @empty
+
+            {{-- Empty state: no child profiles yet --}}
+            <div class="sm:col-span-2 border border-dashed border-[var(--accent-soft)] rounded-2xl bg-white p-8 text-center">
+
+                <div class="w-11 h-11 mx-auto rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center mb-3">
+
+                    <svg
+                        class="w-5 h-5 text-[var(--accent)]"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
+                    </svg>
+
+                </div>
+
+                <p class="text-sm font-semibold mb-1">
+                    No child profiles yet
+                </p>
+
+                <p class="text-[13px] text-[var(--ink-soft)] mb-4">
+                    Add a profile to start tracking observations and progress.
+                </p>
+
+                <a
+                    href="{{ route('children.create') }}"
+                    class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition"
+                >
+                    <span class="text-base leading-none">+</span>
+                    Add Profile
+                </a>
+
+            </div>
+
+        @endforelse
+
+        {{-- Add Profile placeholder --}}
+        @if(auth()->user()->children()->exists())
+
+            <a
+                href="{{ route('children.create') }}"
+                class="min-h-[190px] border border-dashed border-[var(--accent-soft)] rounded-2xl bg-white p-8 flex flex-col items-center justify-center text-center hover:border-[var(--accent)] hover:bg-[var(--accent-tint)] transition"
+            >
+
+                <div class="w-11 h-11 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center mb-3">
+
+                    <span class="text-xl text-[var(--accent)]">
+                        +
+                    </span>
+
+                </div>
+
+                <p class="text-sm font-semibold mb-1">
+                    Add Profile
+                </p>
+
+                <p class="text-[13px] text-[var(--ink-soft)]">
+                    Add another child profile
+                </p>
+
+            </a>
+
+        @endif
+
+    </div>
+</section>
 
                 {{-- Engagement Trends chart --}}
                 <section class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
@@ -297,9 +460,9 @@
                     <h2 class="text-[15px] font-bold tracking-tight mb-3">Priority Alerts</h2>
 
                     {{-- DATA: @foreach($priorityAlerts as $alert) ... @endforeach --}}
-                    <div class="border border-dashed border-[var(--line)] rounded-xl p-5 text-center">
-                        <div class="w-9 h-9 mx-auto rounded-full bg-[var(--canvas)] flex items-center justify-center mb-2.5">
-                            <svg class="w-4 h-4 text-[var(--ink-soft)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+                    <div class="border border-dashed border-[var(--accent-soft)] rounded-xl p-5 text-center">
+                        <div class="w-9 h-9 mx-auto rounded-full bg-[var(--accent-tint)] flex items-center justify-center mb-2.5">
+                            <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
                         </div>
                         <p class="text-sm font-semibold">No alerts right now</p>
                         <p class="text-[12.5px] text-[var(--ink-soft)] mt-1">Flagged patterns needing validation will show up here.</p>
@@ -310,7 +473,6 @@
                 <section class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center gap-2 mb-3">
                         <h2 class="text-[15px] font-bold tracking-tight">AI Insights</h2>
-                        <span class="text-[10px] font-bold tracking-wide bg-[var(--ink)] text-white px-2 py-0.5 rounded-full">PREMIUM</span>
                     </div>
 
                     {{-- DATA: @foreach($aiInsights as $insight) ... @endforeach — never populate with fabricated predictions; render only once a real ML pipeline supplies results. --}}
