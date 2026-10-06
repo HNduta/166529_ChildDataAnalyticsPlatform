@@ -14,24 +14,30 @@ class BehaviouralRecord extends Model
     protected $fillable = [
         'child_id',
         'caregiver_id',
-        'date_recorded',
+        'observation_date',
+        'success_rate',
+        'engagement_level',
+        'prompts_required',
+        'eye_contact_rating',
+        'session_duration_minutes',
         'communication_score',
         'social_interaction_score',
-        'engagement_level',
         'repetitive_behaviour_score',
-        'session_duration',
         'notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'date_recorded' => 'date',
+            'observation_date' => 'date',
+            'success_rate' => 'decimal:2',
+            'engagement_level' => 'integer',
+            'prompts_required' => 'decimal:2',
+            'eye_contact_rating' => 'integer',
+            'session_duration_minutes' => 'integer',
             'communication_score' => 'integer',
             'social_interaction_score' => 'integer',
-            'engagement_level' => 'integer',
             'repetitive_behaviour_score' => 'integer',
-            'session_duration' => 'integer',
         ];
     }
 

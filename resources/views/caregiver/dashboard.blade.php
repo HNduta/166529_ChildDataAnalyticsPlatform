@@ -84,7 +84,7 @@
             <div>
                 <p class="eyebrow px-3 mb-2 uppercase">Behavior</p>
                 <div class="space-y-1">
-                    <a href="#" class="navlink">
+                    <a href="{{ route('behavioural-records.create') }}" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
                         Observation Form
                     </a>
@@ -230,7 +230,7 @@
                                 Your dashboard is set up and ready. Once child profiles and observations are added, a summary will appear here.
                             </p>
                             <div class="flex flex-wrap items-center gap-3">
-                                <a href="#" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                                <a href="{{ route('behavioural-records.create') }}" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
                                     <span class="text-base leading-none">+</span> Log Observation
                                 </a>
                                 <a href="#" class="inline-flex items-center gap-1.5 border border-[var(--accent-soft)] text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">

@@ -4,6 +4,7 @@ use App\Http\Controllers\AdministratorDashboardController;
 use App\Http\Controllers\CaregiverDashboardController;
 use App\Http\Controllers\ClinicianDashboardController;
 use App\Http\Controllers\ChildController;
+use App\Http\Controllers\BehaviouralRecordController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -16,6 +17,12 @@ Route::middleware(['auth', 'role:caregiver'])->group(function () {
         ->name('caregiver.dashboard');
 
     Route::resource('children', ChildController::class);
+
+    Route::get('/behavioural-records/create', [BehaviouralRecordController::class, 'create'])
+        ->name('behavioural-records.create');
+
+    Route::post('/behavioural-records', [BehaviouralRecordController::class, 'store'])
+        ->name('behavioural-records.store');
 
 });
 
