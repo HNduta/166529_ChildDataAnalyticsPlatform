@@ -9,75 +9,64 @@ use Illuminate\View\View;
 
 class BehaviouralRecordController extends Controller
 {
-    /**
-     * Display behavioural records belonging to the authenticated caregiver.
-     */
+    //Display behavioural records belonging to the authenticated caregiver.
     public function index(Request $request): View
     {
-        $query = $request->user()
+        $filters = $request->validate([
+            'child_id' => [
+                'nullable',
+                'integer',
+            ],
+            'observation_date' => [
+                'nullable',
+                'date',
+                'before_or_equal:today',
+            ],
+        ]);
+
+        $caregiver = $request->user();
+
+        $query = $caregiver
             ->behaviouralRecords()
             ->with('child')
             ->latest('observation_date');
 
-        // Filter by child
-        if ($request->filled('child_id')) {
-            $childId = $request->input('child_id');
+        // Filter by a child who belongs to this caregiver.
+        if (!empty($filters['child_id'])) {
+            $caregiver->children()->findOrFail($filters['child_id']);
 
-            // Make sure the selected child belongs to the caregiver
-            $request->user()
-                ->children()
-                ->findOrFail($childId);
-
-            $query->where('child_id', $childId);
+            $query->where('child_id', $filters['child_id']);
         }
 
-        // Filter by observation date
-        if ($request->filled('observation_date')) {
+        // Filter by observation date.
+        if (!empty($filters['observation_date'])) {
             $query->whereDate(
                 'observation_date',
-                $request->input('observation_date')
+                $filters['observation_date']
             );
         }
 
         $records = $query->paginate(10)->withQueryString();
 
-        // All children belonging to the caregiver
-        $children = $request->user()
+        $children = $caregiver
             ->children()
             ->orderBy('first_name')
             ->get();
 
-        // Total number of records
-        $totalRecords = $request->user()
-            ->behaviouralRecords()
-            ->count();
+        $caregiverRecords = $caregiver->behaviouralRecords();
 
-        // Average score across all four behavioural indicators
-        $averageScore = $request->user()
-            ->behaviouralRecords()
-            ->selectRaw(
-                'AVG(
-                    (
-                        communication_score +
-                        social_interaction_score +
-                        engagement_level +
-                        repetitive_behaviour_score
-                    ) / 4.0
-                ) as average_score'
-            )
-            ->value('average_score');
+        $totalRecords = (clone $caregiverRecords)->count();
 
-        $averageSuccessRate = $averageScore !== null
-            ? ($averageScore / 5) * 100
-            : null;
+        // Use the actual success_rate column for the success-rate metric.
+        $averageSuccessRate = (clone $caregiverRecords)
+            ->avg('success_rate');
 
-        // Average session duration
-        $averageDuration = $request->user()
-            ->behaviouralRecords()
+        // Average session duration in minutes.
+        $averageDuration = (clone $caregiverRecords)
             ->avg('session_duration_minutes');
 
-        // Number of children with at least one observation
-        $childrenTracked = $request->user()
+        // Number of children with at least one behavioural observation.
+        $childrenTracked = $caregiver
             ->children()
             ->whereHas('behaviouralRecords')
             ->count();
@@ -111,12 +100,11 @@ class BehaviouralRecordController extends Controller
         );
     }
 
-    /**
-     * Store a new behavioural observation.
-     */
-    public function store(Request $request): RedirectResponse
+    //Shared validation rules for creating and updating observations.
+     
+    private function observationRules(): array
     {
-        $validated = $request->validate([
+        return [
             'child_id' => [
                 'required',
                 'integer',
@@ -132,36 +120,50 @@ class BehaviouralRecordController extends Controller
             'communication_score' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:5',
+                'between:1,5',
             ],
 
             'social_interaction_score' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:5',
+                'between:1,5',
             ],
 
             'engagement_level' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:5',
+                'between:1,5',
             ],
 
             'repetitive_behaviour_score' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:5',
+                'between:1,5',
             ],
 
             'session_duration_minutes' => [
                 'nullable',
                 'integer',
-                'min:1',
-                'max:480',
+                'between:1,480',
+            ],
+
+            // Required because the database column is NOT NULL.
+            'success_rate' => [
+                'required',
+                'numeric',
+                'between:0,100',
+            ],
+
+            'prompts_required' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'eye_contact_rating' => [
+                'nullable',
+                'integer',
+                'between:1,5',
             ],
 
             'notes' => [
@@ -169,44 +171,53 @@ class BehaviouralRecordController extends Controller
                 'string',
                 'max:2000',
             ],
+        ];
+    }
 
-            'success_rate' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:100',
-            ],
+    // Save a new behavioural observation.
+     
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(
+            $this->observationRules(),
+            [
+                'child_id.required' =>
+                    'Please select a child for this observation.',
 
-            'prompts_required' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
+                'observation_date.required' =>
+                    'Please enter the observation date.',
 
-            'eye_contact_rating' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
-        ]);
+                'observation_date.before_or_equal' =>
+                    'The observation date cannot be in the future.',
 
-        // Make sure the selected child belongs to this caregiver.
+                'success_rate.required' =>
+                    'Please enter the success rate.',
+
+                'success_rate.between' =>
+                    'Success rate must be between 0 and 100.',
+
+                'prompts_required.integer' =>
+                    'Prompts required must be a whole number.',
+
+                'prompts_required.min' =>
+                    'Prompts required cannot be negative.',
+            ]
+        );
+
+        // Confirm that the selected child belongs to the current caregiver.
         $child = $request->user()
             ->children()
             ->findOrFail($validated['child_id']);
 
-        // Assign caregiver from the authenticated user.
-        $validated['caregiver_id'] = $request->user()->id;
-
         $child->behaviouralRecords()->create([
-           'caregiver_id' => $request->user()->id,
+            'caregiver_id' => $request->user()->id,
             'observation_date' => $validated['observation_date'],
             'communication_score' => $validated['communication_score'],
             'social_interaction_score' => $validated['social_interaction_score'],
             'engagement_level' => $validated['engagement_level'],
             'repetitive_behaviour_score' => $validated['repetitive_behaviour_score'],
-            'session_duration_minutes' => $validated['session_duration_minutes'] ?? null,
+            'session_duration_minutes' =>
+                $validated['session_duration_minutes'] ?? null,
             'success_rate' => $validated['success_rate'],
             'prompts_required' => $validated['prompts_required'] ?? null,
             'eye_contact_rating' => $validated['eye_contact_rating'] ?? null,
@@ -221,11 +232,8 @@ class BehaviouralRecordController extends Controller
             );
     }
 
-    /**
-     * Show the edit form.
-     *
-     * The caregiver uses the same Observation Form design.
-     */
+     // Show the existing edit form for an observation owned by the caregiver.
+
     public function edit(
         Request $request,
         BehaviouralRecord $behaviouralRecord
@@ -246,94 +254,44 @@ class BehaviouralRecordController extends Controller
         );
     }
 
-    /**
-     * Update an existing behavioural observation.
-     */
+    //Update an existing behavioural observation.
+    
     public function update(
         Request $request,
         BehaviouralRecord $behaviouralRecord
     ): RedirectResponse {
-        // Make sure the record belongs to the authenticated caregiver.
+        // Ensure the record belongs to the authenticated caregiver.
         $record = $request->user()
             ->behaviouralRecords()
             ->findOrFail($behaviouralRecord->id);
 
-        $validated = $request->validate([
-            'child_id' => [
-                'required',
-                'integer',
-                'exists:children,id',
-            ],
+        $validated = $request->validate(
+            $this->observationRules(),
+            [
+                'child_id.required' =>
+                    'Please select a child for this observation.',
 
-            'observation_date' => [
-                'required',
-                'date',
-                'before_or_equal:today',
-            ],
+                'observation_date.required' =>
+                    'Please enter the observation date.',
 
-            'communication_score' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
+                'observation_date.before_or_equal' =>
+                    'The observation date cannot be in the future.',
 
-            'social_interaction_score' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
+                'success_rate.required' =>
+                    'Please enter the success rate.',
 
-            'engagement_level' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
+                'success_rate.between' =>
+                    'Success rate must be between 0 and 100.',
 
-            'repetitive_behaviour_score' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
+                'prompts_required.integer' =>
+                    'Prompts required must be a whole number.',
 
-            'session_duration_minutes' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:480',
-            ],
+                'prompts_required.min' =>
+                    'Prompts required cannot be negative.',
+            ]
+        );
 
-            'notes' => [
-                'nullable',
-                'string',
-                'max:2000',
-            ],
-
-            'success_rate' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:100',
-            ],
-
-            'prompts_required' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
-
-            'eye_contact_rating' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:5',
-            ],
-        ]);
-
-        // Make sure the selected child belongs to this caregiver.
+        // The new child must also belong to the same caregiver.
         $child = $request->user()
             ->children()
             ->findOrFail($validated['child_id']);
@@ -345,11 +303,12 @@ class BehaviouralRecordController extends Controller
             'social_interaction_score' => $validated['social_interaction_score'],
             'engagement_level' => $validated['engagement_level'],
             'repetitive_behaviour_score' => $validated['repetitive_behaviour_score'],
-            'session_duration_minutes' => $validated['session_duration_minutes'] ?? null,
-            'notes' => $validated['notes'] ?? null,
+            'session_duration_minutes' =>
+                $validated['session_duration_minutes'] ?? null,
             'success_rate' => $validated['success_rate'],
             'prompts_required' => $validated['prompts_required'] ?? null,
             'eye_contact_rating' => $validated['eye_contact_rating'] ?? null,
+            'notes' => $validated['notes'] ?? null,
         ]);
 
         return redirect()
@@ -360,9 +319,8 @@ class BehaviouralRecordController extends Controller
             );
     }
 
-    /**
-     * Delete an existing behavioural observation.
-     */
+    // Delete an observation belonging to the authenticated caregiver.
+    
     public function destroy(
         Request $request,
         BehaviouralRecord $behaviouralRecord
