@@ -35,6 +35,9 @@ class BehaviouralRecord extends Model
             'engagement_level' => 'integer',
             'repetitive_behaviour_score' => 'integer',
             'session_duration_minutes' => 'integer',
+            'success_rate' => 'float',
+            'prompts_required' => 'integer',
+            'eye_contact_rating' => 'integer',
         ];
     }
 
