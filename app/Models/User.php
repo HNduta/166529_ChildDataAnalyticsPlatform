@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -49,5 +50,15 @@ class User extends Authenticatable
     public function milestones(): HasMany
     {
         return $this->hasMany(Milestone::class, 'recorded_by');
+    }
+
+    public function assignedChildren(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Child::class,
+            'child_clinician',
+            'clinician_id',
+            'child_id'
+        )->withTimestamps();
     }
 }

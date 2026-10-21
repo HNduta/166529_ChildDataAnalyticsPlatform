@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Child extends Model
 {
@@ -60,4 +61,15 @@ class Child extends Model
     {
         return $this->hasMany(Recommendation::class, 'child_id');
     }
+
+    public function clinicians(): BelongsToMany
+    {
+         return $this->belongsToMany(
+            User::class,
+            'child_clinician',
+            'child_id',
+            'clinician_id'
+        )->withTimestamps();
+    }
+
 }
