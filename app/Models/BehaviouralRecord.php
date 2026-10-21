@@ -24,6 +24,7 @@ class BehaviouralRecord extends Model
         'prompts_required',
         'eye_contact_rating',
         'notes',
+        'ml_assessment_inputs',
     ];
 
     protected function casts(): array
@@ -38,6 +39,7 @@ class BehaviouralRecord extends Model
             'success_rate' => 'float',
             'prompts_required' => 'integer',
             'eye_contact_rating' => 'integer',
+            'ml_assessment_inputs' => 'array',
         ];
     }
 
