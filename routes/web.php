@@ -18,6 +18,21 @@ Route::middleware(['auth', 'role:caregiver'])->group(function () {
     Route::get('/caregiver/dashboard', [CaregiverDashboardController::class, 'index'])
         ->name('caregiver.dashboard');
 
+    Route::get('/caregiver/recommendations', [ChildController::class, 'caregiverRecommendations'])
+        ->name('caregiver.recommendations');
+
+    Route::get('/children/{child}/goals-milestones', [ChildController::class, 'goalsMilestones'])
+        ->name('children.goals-milestones');
+
+    Route::get('/children/{child}/recommendations', [ChildController::class, 'recommendations'])
+        ->name('children.recommendations');
+
+    Route::get('/children/{child}/predictions-analytics', [ChildController::class, 'predictionsAnalytics'])
+        ->name('children.predictions-analytics');
+
+    Route::post('/children/{child}/predictions-analytics/generate', [ChildController::class, 'generatePrediction'])
+        ->name('children.predictions-analytics.generate');
+
     Route::resource('children', ChildController::class);
 
     Route::resource('behavioural-records', BehaviouralRecordController::class)

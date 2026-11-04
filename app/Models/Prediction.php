@@ -45,4 +45,54 @@ class Prediction extends Model
     {
         return $this->hasMany(Recommendation::class, 'prediction_id');
     }
+
+    /**
+     * Generate and store transparent, non-diagnostic support recommendations
+     * mapped from this prediction outcome and assessment context.
+     */
+    public function syncSupportRecommendations(array $inputs = []): void
+    {
+        if ($this->recommendations()->exists()) {
+            return;
+        }
+
+        $domain = ucfirst((string) ($inputs['domain'] ?? $inputs['primary_domain'] ?? 'Communication'));
+        $isHighSupport = (string) $this->predicted_outcome === '0';
+
+        $items = $isHighSupport
+            ? [
+                [
+                    'category' => $domain,
+                    'recommendation_text' => 'Increase structured visual scaffolding and step-by-step prompting during ' . strtolower($domain) . ' activities, breaking tasks into short 10-15 minute intervals.',
+                    'status' => 'active',
+                ],
+                [
+                    'category' => 'Sensory & Regulation',
+                    'recommendation_text' => 'Incorporate scheduled sensory decompression breaks and visual countdown timers before routine transitions to support emotional regulation.',
+                    'status' => 'active',
+                ],
+            ]
+            : [
+                [
+                    'category' => $domain,
+                    'recommendation_text' => 'Maintain current structured ' . strtolower($domain) . ' routines while gradually fading verbal prompts to encourage independent skill generalization.',
+                    'status' => 'active',
+                ],
+                [
+                    'category' => 'Social Reciprocity',
+                    'recommendation_text' => 'Introduce guided peer or caregiver turn-taking activities to build on positive session engagement trends.',
+                    'status' => 'active',
+                ],
+            ];
+
+        foreach ($items as $item) {
+            $this->recommendations()->create([
+                'child_id' => $this->child_id,
+                'recommendation_text' => $item['recommendation_text'],
+                'category' => $item['category'],
+                'date_generated' => ($this->date_generated ?? now())->toDateString(),
+                'status' => $item['status'],
+            ]);
+        }
+    }
 }

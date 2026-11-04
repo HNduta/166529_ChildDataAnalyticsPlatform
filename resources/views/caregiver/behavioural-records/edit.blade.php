@@ -145,34 +145,7 @@
             </div>
 
 
-            <div>
 
-                <p class="eyebrow px-3 mb-2 uppercase">
-                    Progress
-                </p>
-
-                <a href="#" class="navlink">
-                    Goals &amp; Milestones
-                </a>
-
-            </div>
-
-
-            <div>
-
-                <p class="eyebrow px-3 mb-2 uppercase">
-                    Insights
-                </p>
-
-                <a href="#" class="navlink">
-                    ML Predictions
-                </a>
-
-                <a href="#" class="navlink">
-                    Analytics
-                </a>
-
-            </div>
 
 
             <div>
@@ -181,7 +154,7 @@
                     Support
                 </p>
 
-                <a href="#" class="navlink">
+                <a href="{{ route('caregiver.recommendations') }}" class="navlink">
                     Recommendations
                 </a>
 
