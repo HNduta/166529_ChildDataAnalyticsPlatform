@@ -208,52 +208,14 @@
                     </div>
                 </div>
 
-                <div>
-                    <p class="eyebrow px-3 mb-2 uppercase">Progress</p>
 
-                    <div class="space-y-1">
-
-                        <a href="#" class="navlink">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="9"/>
-                                <circle cx="12" cy="12" r="4"/>
-                                <circle cx="12" cy="12" r=".5"/>
-                            </svg>
-                            Goals &amp; Milestones
-                        </a>
-
-                    </div>
-                </div>
-
-                <div>
-                    <p class="eyebrow px-3 mb-2 uppercase">Insights</p>
-
-                    <div class="space-y-1">
-
-                        <a href="#" class="navlink">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path d="M9 18h6M10 22h4M12 2a6 6 0 00-4 10.4c.6.6.9 1 .9 1.8V15h6.2v-.8c0-.8.3-1.2.9-1.8A6 6 0 0012 2z"/>
-                            </svg>
-                            ML Predictions
-                        </a>
-
-                        <a href="#" class="navlink">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path d="M3 3v18h18"/>
-                                <path d="M7 15l4-5 3 3 5-7"/>
-                            </svg>
-                            Analytics
-                        </a>
-
-                    </div>
-                </div>
 
                 <div>
                     <p class="eyebrow px-3 mb-2 uppercase">Support</p>
 
                     <div class="space-y-1">
 
-                        <a href="#" class="navlink">
+                        <a href="{{ route('caregiver.recommendations') }}" class="navlink">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/>
                             </svg>

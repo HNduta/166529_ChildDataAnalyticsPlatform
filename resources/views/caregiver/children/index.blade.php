@@ -147,64 +147,17 @@
 
                 <div class="space-y-1">
 
-                    <a href="#" class="navlink">
+                    <a href="{{ route('behavioural-records.create') }}" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
 
                         Observation Form
                     </a>
 
 
-                    <a href="#" class="navlink">
+                    <a href="{{ route('behavioural-records.index') }}" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19V6"/><path d="M10 19V10"/><path d="M16 19V4"/><path d="M22 19V13"/></svg>
 
                         Records
-                    </a>
-
-                </div>
-
-            </div>
-
-
-            {{-- Progress --}}
-            <div>
-
-                <p class="eyebrow px-3 mb-2 uppercase">
-                    Progress
-                </p>
-
-                <div class="space-y-1">
-
-                    <a href="#" class="navlink">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></svg>
-
-                        Goals &amp; Milestones
-                    </a>
-
-                </div>
-
-            </div>
-
-
-            {{-- Insights --}}
-            <div>
-
-                <p class="eyebrow px-3 mb-2 uppercase">
-                    Insights
-                </p>
-
-                <div class="space-y-1">
-
-                    <a href="#" class="navlink">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a6 6 0 00-4 10.4c.6.6.9 1 .9 1.8V15h6.2v-.8c0-.8.3-1.2.9-1.8A6 6 0 0012 2z"/></svg>
-
-                        ML Predictions
-                    </a>
-
-
-                    <a href="#" class="navlink">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
-
-                        Analytics
                     </a>
 
                 </div>
@@ -221,7 +174,7 @@
 
                 <div class="space-y-1">
 
-                    <a href="#" class="navlink">
+                    <a href="{{ route('caregiver.recommendations') }}" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
 
                         Recommendations
@@ -250,11 +203,9 @@
 
             {{-- Search --}}
             <div class="flex-1 max-w-md ml-0 sm:ml-6">
-
-                <label class="relative block">
-
+                <form method="GET" action="{{ route('children.index') }}" class="relative flex items-center" onsubmit="filterChildCards(); return true;">
                     <svg
-                        class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
+                        class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-soft)] pointer-events-none"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="2"
@@ -266,13 +217,22 @@
 
                     <input
                         type="text"
-                        placeholder="Search records..."
-                        disabled
-                        class="w-full bg-[var(--canvas)] border border-[var(--line)] rounded-lg pl-9 pr-3 py-2 text-sm placeholder:text-[var(--ink-soft)] focus:outline-none"
+                        id="child-profile-search"
+                        name="search"
+                        value="{{ request('search') }}"
+                        oninput="filterChildCards()"
+                        placeholder="Search child profiles..."
+                        class="w-full bg-[var(--canvas)] border border-[var(--line)] rounded-lg pl-9 pr-20 py-2 text-sm placeholder:text-[var(--ink-soft)] focus:bg-white focus:outline-none"
                     >
 
-                </label>
-
+                    <button
+                        type="submit"
+                        onclick="filterChildCards()"
+                        class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[var(--ink)] text-white text-xs font-semibold px-2.5 py-1 rounded-md hover:opacity-90 transition"
+                    >
+                        Search
+                    </button>
+                </form>
             </div>
 
 
@@ -380,7 +340,8 @@
 
                     @foreach ($children as $child)
 
-                        <div class="bg-white border border-[var(--line)] rounded-2xl p-5 hover:border-[var(--accent-soft)] transition">
+                        <div class="child-profile-card bg-white border border-[var(--line)] rounded-2xl p-5 hover:border-[var(--accent-soft)] transition"
+                             data-search="{{ strtolower($child->first_name . ' ' . $child->sex . ' ' . ($child->diagnosis_confirmed ? 'asd confirmed' : 'not confirmed')) }}">
 
                             {{-- Child Header --}}
                             <div class="flex items-start justify-between gap-4">
@@ -577,6 +538,22 @@
     </div>
 
 </div>
+
+<script>
+    function filterChildCards() {
+        const input = document.getElementById('child-profile-search');
+        const q = input ? input.value.toLowerCase().trim() : '';
+        const cards = document.querySelectorAll('.child-profile-card');
+        cards.forEach(function (card) {
+            const text = (card.getAttribute('data-search') || '') + ' ' + (card.textContent || '').toLowerCase();
+            if (!q || text.indexOf(q) > -1) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+</script>
 
 </body>
 </html>

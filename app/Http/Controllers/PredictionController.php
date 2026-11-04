@@ -109,14 +109,21 @@ class PredictionController extends Controller
             ], 502);
         }
 
+        $predictedKey = (string) $result['predicted_class'];
+        $confidenceScore = isset($result['class_scores'][$predictedKey])
+            ? round((float) $result['class_scores'][$predictedKey], 4)
+            : null;
+
         $prediction = $behaviouralRecord->predictions()->create([
             'child_id' => $behaviouralRecord->child_id,
             'model_used' => 'child_intervention_pipeline',
-            'predicted_outcome' => (string) $result['predicted_class'],
-            'confidence_score' => null,
+            'predicted_outcome' => $predictedKey,
+            'confidence_score' => $confidenceScore,
             'date_generated' => now(),
             'validated_by_clinician' => false,
         ]);
+
+        $prediction->syncSupportRecommendations($input);
 
         return response()->json([
             'message' => 'Prediction generated successfully.',
