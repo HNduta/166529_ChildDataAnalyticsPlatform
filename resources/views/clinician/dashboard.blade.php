@@ -384,16 +384,23 @@
                                         </td>
 
                                         <td class="py-3.5 px-2 text-right">
-                                            @if ($latestObs)
+                                            <div class="inline-flex flex-wrap items-center justify-end gap-2">
                                                 <a
-                                                    href="{{ route('clinician.assessments.edit', $latestObs) }}"
-                                                    class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition"
+                                                    href="{{ route('clinician.children.show', $assignedChild) }}"
+                                                    class="inline-flex items-center gap-1 border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)] text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[var(--ink)] hover:text-white transition"
                                                 >
-                                                    {{ $hasCompleteAssessment ? 'Update Assessment' : 'Complete Assessment' }}
+                                                    Monitor &amp; Goals
                                                 </a>
-                                            @else
-                                                <span class="text-xs text-[var(--ink-soft)] italic">Waiting for caregiver log</span>
-                                            @endif
+
+                                                @if ($latestObs)
+                                                    <a
+                                                        href="{{ route('clinician.assessments.edit', $latestObs) }}"
+                                                        class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition"
+                                                    >
+                                                        {{ $hasCompleteAssessment ? 'Update Assessment' : 'Complete Assessment' }}
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

@@ -6,6 +6,7 @@ use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -723,6 +724,146 @@ class BehaviouralAnalyticsDataTest extends TestCase
 
         $firstRec->refresh();
         $this->assertSame('implemented', $firstRec->status);
+    }
+
+    public function test_clinician_child_monitoring_therapy_goals_milestones_and_browser_prediction_workflow(): void
+    {
+        $caregiver = User::factory()->create(['name' => 'Amina Caregiver', 'role' => 'caregiver']);
+        $assignedClinician = User::factory()->create(['name' => 'Dr. Wanjiku', 'role' => 'clinician']);
+        $unassignedClinician = User::factory()->create(['name' => 'Dr. Otieno', 'role' => 'clinician']);
+
+        $child = $caregiver->children()->create([
+            'first_name' => 'Zuri',
+            'age_in_months' => 42,
+            'sex' => 'Female',
+            'diagnosis_confirmed' => true,
+        ]);
+        $child->clinicians()->attach($assignedClinician->id);
+
+        $observation = $child->behaviouralRecords()->create([
+            'caregiver_id' => $caregiver->id,
+            'observation_date' => '2026-11-01',
+            'communication_score' => 7,
+            'social_interaction_score' => 6,
+            'engagement_level' => 8,
+            'repetitive_behaviour_score' => 3,
+            'session_duration_minutes' => 35,
+            'success_rate' => 72.5,
+            'notes' => 'Used picture cards during snack time.',
+            'ml_assessment_inputs' => [
+                'avg_success_first_2' => 72.5,
+                'age_years' => 3.5,
+                'ados2_social_affect' => 8,
+                'ados2_rrb' => 3,
+                'cognitive_verbal_percentile' => 62,
+                'cognitive_nonverbal_percentile' => 68,
+                'cognitive_gca_percentile' => 65,
+                'adaptive_composite_percentile' => 60,
+                'num_current_services' => 2,
+                'domain' => 'Communication',
+                'gender' => 'F',
+                'support_level' => 'Level 1',
+                'primary_domain' => 'Communication',
+                'ados2_comparison_score' => 'Moderate',
+            ],
+        ]);
+
+        // 1. Access control: unassigned clinician and caregiver are forbidden from clinician monitoring view
+        $this->actingAs($unassignedClinician)
+            ->get(route('clinician.children.show', $child))
+            ->assertStatus(403);
+
+        $this->actingAs($caregiver)
+            ->get(route('clinician.children.show', $child))
+            ->assertStatus(403);
+
+        // 2. Assigned clinician can view child monitoring page with longitudinal scores
+        $showResponse = $this->actingAs($assignedClinician)
+            ->get(route('clinician.children.show', $child));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Zuri · Clinical Monitoring', false);
+        $showResponse->assertSee('Used picture cards during snack time.', false);
+
+        // 3. Assigned clinician can create a SMART Therapy Goal
+        $this->actingAs($assignedClinician)
+            ->post(route('clinician.goals.store', $child), [
+                'goal_domain' => 'Communication',
+                'goal_description' => 'Initiate two-word requests during structured play in 4 out of 5 opportunities.',
+                'baseline_level' => '35',
+                'target_level' => '80',
+                'target_date' => '2026-12-15',
+                'status' => 'in_progress',
+            ])
+            ->assertRedirect(route('clinician.children.show', $child));
+
+        $goal = $child->therapyGoals()->firstOrFail();
+        $this->assertSame('Communication', $goal->goal_domain);
+        $this->assertSame('in_progress', $goal->status);
+        $this->assertSame($assignedClinician->id, $goal->clinician_id);
+
+        // 4. Assigned clinician can update goal status and levels
+        $this->actingAs($assignedClinician)
+            ->patch(route('clinician.goals.update', [$child, $goal]), [
+                'status' => 'on_track',
+                'baseline_level' => '55',
+                'target_level' => '80',
+            ])
+            ->assertRedirect(route('clinician.children.show', $child));
+
+        $goal->refresh();
+        $this->assertSame('on_track', $goal->status);
+        $this->assertSame('55', $goal->baseline_level);
+
+        // 5. Assigned clinician can add a Developmental Milestone and toggle its achievement flag
+        $this->actingAs($assignedClinician)
+            ->post(route('clinician.milestones.store', [$child, $goal]), [
+                'milestone_description' => 'Point to preferred snack picture card independently.',
+            ])
+            ->assertRedirect(route('clinician.children.show', $child));
+
+        $milestone = $goal->milestones()->firstOrFail();
+        $this->assertFalse($milestone->achieved_flag);
+
+        $this->actingAs($assignedClinician)
+            ->patch(route('clinician.milestones.toggle', [$child, $milestone]), [
+                'achieved_flag' => '1',
+            ])
+            ->assertRedirect(route('clinician.children.show', $child));
+
+        $milestone->refresh();
+        $this->assertTrue($milestone->achieved_flag);
+        $this->assertNotNull($milestone->date_achieved);
+
+        // Caregiver immediately sees the clinician's therapy goal and achieved milestone
+        $caregiverGoalsPage = $this->actingAs($caregiver)->get(route('children.goals-milestones', $child));
+        $caregiverGoalsPage->assertStatus(200);
+        $caregiverGoalsPage->assertSee('Initiate two-word requests during structured play', false);
+        $caregiverGoalsPage->assertSee('Point to preferred snack picture card independently.', false);
+
+        // 6. Assigned clinician can trigger developmental indicator from browser UI (non-JSON redirect)
+        Http::fake([
+            '*' => Http::response([
+                'predicted_class' => 0,
+                'class_scores' => [
+                    '0' => 0.84,
+                    '1' => 0.16,
+                ],
+                'score_interpretation' => 'Uncalibrated model score.',
+                'disclaimer' => 'Decision support only.',
+            ], 200),
+        ]);
+
+        $this->actingAs($assignedClinician)
+            ->post(route('behavioural-records.predict', $observation), [
+                'redirect_to' => '/clinician/children/' . $child->id,
+            ])
+            ->assertRedirect('/clinician/children/' . $child->id);
+
+        $this->assertDatabaseHas('predictions', [
+            'child_id' => $child->id,
+            'observation_id' => $observation->id,
+            'predicted_outcome' => '0',
+        ]);
     }
 }
 

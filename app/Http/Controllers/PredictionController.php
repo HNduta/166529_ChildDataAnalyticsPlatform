@@ -6,6 +6,7 @@ use App\Models\BehaviouralRecord;
 use App\Models\Prediction;
 use App\Services\ChildPredictionService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -18,7 +19,7 @@ class PredictionController extends Controller
         Request $request,
         BehaviouralRecord $behaviouralRecord,
         ChildPredictionService $predictionService
-    ): JsonResponse {
+    ): JsonResponse|RedirectResponse {
         abort_unless(
             $request->user()
                 && $request->user()->role === 'clinician',
@@ -36,9 +37,15 @@ class PredictionController extends Controller
         $input = $behaviouralRecord->ml_assessment_inputs;
 
         if (!is_array($input)) {
-            return response()->json([
-                'message' => 'Complete and save all 14 assessment inputs first.',
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Complete and save all 14 assessment inputs first.',
+                ], 422);
+            }
+
+            return redirect()
+                ->route('clinician.assessments.edit', $behaviouralRecord)
+                ->withErrors(['assessment' => 'Complete and save all 14 assessment inputs first.']);
         }
 
         $requiredFields = [
@@ -64,19 +71,31 @@ class PredictionController extends Controller
         );
 
         if (!empty($missingFields)) {
-            return response()->json([
-                'message' => 'Complete all required assessment inputs first.',
-                'missing_fields' => array_values($missingFields),
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Complete all required assessment inputs first.',
+                    'missing_fields' => array_values($missingFields),
+                ], 422);
+            }
+
+            return redirect()
+                ->route('clinician.assessments.edit', $behaviouralRecord)
+                ->withErrors(['assessment' => 'Complete all required assessment inputs first.']);
         }
 
         try {
             $result = $predictionService->predict($input);
         } catch (ValidationException $exception) {
-            return response()->json([
-                'message' => 'The assessment inputs are invalid.',
-                'errors' => $exception->errors(),
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'The assessment inputs are invalid.',
+                    'errors' => $exception->errors(),
+                ], 422);
+            }
+
+            return redirect()
+                ->route('clinician.assessments.edit', $behaviouralRecord)
+                ->withErrors($exception->errors());
         } catch (Throwable $exception) {
             Log::warning(
                 'Prediction request failed.',
@@ -86,9 +105,15 @@ class PredictionController extends Controller
                 ]
             );
 
-            return response()->json([
-                'message' => 'The prediction service is unavailable or returned an invalid response.',
-            ], 503);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'The prediction service is unavailable or returned an invalid response.',
+                ], 503);
+            }
+
+            return redirect()
+                ->back(fallback: route('clinician.children.show', $behaviouralRecord->child_id))
+                ->withErrors(['prediction' => 'The prediction service is unavailable or returned an invalid response.']);
         }
 
         if (
@@ -104,9 +129,15 @@ class PredictionController extends Controller
             || !isset($result['disclaimer'])
             || !is_string($result['disclaimer'])
         ) {
-            return response()->json([
-                'message' => 'The prediction service returned an invalid response.',
-            ], 502);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'The prediction service returned an invalid response.',
+                ], 502);
+            }
+
+            return redirect()
+                ->back(fallback: route('clinician.children.show', $behaviouralRecord->child_id))
+                ->withErrors(['prediction' => 'The prediction service returned an invalid response.']);
         }
 
         $predictedKey = (string) $result['predicted_class'];
@@ -125,13 +156,25 @@ class PredictionController extends Controller
 
         $prediction->syncSupportRecommendations($input);
 
-        return response()->json([
-            'message' => 'Prediction generated successfully.',
-            'prediction' => $prediction,
-            'class_scores' => $result['class_scores'],
-            'score_interpretation' => $result['score_interpretation'] ?? null,
-            'disclaimer' => $result['disclaimer'],
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Prediction generated successfully.',
+                'prediction' => $prediction,
+                'class_scores' => $result['class_scores'],
+                'score_interpretation' => $result['score_interpretation'] ?? null,
+                'disclaimer' => $result['disclaimer'],
+            ], 201);
+        }
+
+        $redirectTo = $request->input('redirect_to');
+        if (is_string($redirectTo) && str_starts_with($redirectTo, '/')) {
+            return redirect($redirectTo)
+                ->with('success', 'Developmental progress indicator generated and caregiver support recommendations updated.');
+        }
+
+        return redirect()
+            ->route('clinician.children.show', $behaviouralRecord->child_id)
+            ->with('success', 'Developmental progress indicator generated and caregiver support recommendations updated.');
     }
 
     public function caregiverIndex(Request $request): JsonResponse
@@ -208,6 +251,12 @@ class PredictionController extends Controller
                 'message' => 'Prediction validation updated successfully.',
                 'prediction' => $prediction->fresh(['child', 'observation']),
             ]);
+        }
+
+        $redirectTo = $request->input('redirect_to');
+        if (is_string($redirectTo) && str_starts_with($redirectTo, '/')) {
+            return redirect($redirectTo)
+                ->with('success', 'Clinical validation and specialist feedback saved successfully.');
         }
 
         return redirect()

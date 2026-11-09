@@ -65,6 +65,10 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                         Clinical Dashboard
                     </a>
+                    <a href="{{ route('clinician.children.show', $record->child) }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        {{ $record->child->first_name }} · Monitoring
+                    </a>
                     <span class="navlink active">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
                         Specialist Assessment
@@ -224,6 +228,9 @@
                         </div>
 
                         <div class="pt-4 border-t border-[var(--line)] flex flex-wrap items-center justify-end gap-3">
+                            <a href="{{ route('clinician.children.show', $record->child) }}" class="px-4 py-2.5 rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-xs font-semibold text-[var(--ink)] hover:bg-[#efe7dc] transition">
+                                Monitor {{ $record->child->first_name }} &amp; Goals
+                            </a>
                             <a href="{{ route('clinician.dashboard') }}" class="px-4 py-2.5 rounded-lg border border-[var(--line)] bg-[var(--canvas)] text-xs font-semibold text-[var(--ink)] hover:bg-[#efe7dc] transition">
                                 Back to Dashboard
                             </a>
@@ -232,6 +239,25 @@
                             </button>
                         </div>
                     </form>
+
+                    @if (\App\Http\Controllers\ClinicianDashboardController::hasCompleteAssessment($record))
+                        <div class="mt-6 pt-5 border-t border-[var(--line)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[var(--canvas)]/60 rounded-xl p-4">
+                            <div>
+                                <p class="text-xs font-bold text-[var(--ink)]">All 14 Specialist Assessment Inputs Saved</p>
+                                <p class="text-xs text-[var(--ink-soft)] mt-0.5">
+                                    You can now generate or update {{ $record->child->first_name }}'s non-diagnostic developmental progress indicator and caregiver home support guides.
+                                </p>
+                            </div>
+                            <form method="POST" action="{{ route('behavioural-records.predict', $record) }}" class="shrink-0">
+                                @csrf
+                                <input type="hidden" name="redirect_to" value="/clinician/children/{{ $record->child->id }}">
+                                <button type="submit" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    Generate Developmental Indicator
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
 
             </div>
