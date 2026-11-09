@@ -989,5 +989,116 @@ class BehaviouralAnalyticsDataTest extends TestCase
         $adminDash->assertDontSee('class="skel"', false);
         $adminDash->assertDontSee('/administrator/dashboard', false);
     }
+
+    public function test_administrator_user_governance_role_management_and_privilege_safeguards(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'Primary Admin',
+            'email' => 'admin@autisync.test',
+            'role' => 'administrator',
+        ]);
+        $caregiver = User::factory()->create([
+            'name' => 'Grace Caregiver',
+            'email' => 'grace@autisync.test',
+            'role' => 'caregiver',
+        ]);
+        $clinician = User::factory()->create([
+            'name' => 'Dr. Kamau',
+            'email' => 'kamau@autisync.test',
+            'role' => 'clinician',
+        ]);
+        $child = Child::create([
+            'caregiver_id' => $caregiver->id,
+            'first_name' => 'Imani',
+            'age_in_months' => 42,
+            'sex' => 'Female',
+            'born_with_jaundice' => false,
+            'family_member_with_asd' => false,
+            'diagnosis_confirmed' => true,
+        ]);
+
+        // 1. Non-admin users are blocked from administrator governance actions (403 Forbidden)
+        $this->actingAs($caregiver)
+            ->post(route('administrator.users.store'), [
+                'name' => 'Unauthorized User',
+                'email' => 'unauth@autisync.test',
+                'role' => 'clinician',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($clinician)
+            ->patch(route('administrator.users.update-role', $caregiver), [
+                'role' => 'administrator',
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($caregiver)
+            ->post(route('administrator.children.assign-clinician', $child), [
+                'clinician_id' => $clinician->id,
+            ])
+            ->assertStatus(403);
+
+        // 2. Administrator can onboard a new Clinician account from /admin/dashboard
+        $this->actingAs($admin)
+            ->post(route('administrator.users.store'), [
+                'name' => 'Dr. Wanjiku',
+                'email' => 'wanjiku@autisync.test',
+                'role' => 'clinician',
+                'password' => 'ClinicianPass123!',
+                'password_confirmation' => 'ClinicianPass123!',
+            ])
+            ->assertRedirect(route('administrator.dashboard'))
+            ->assertSessionHas('success');
+
+        $newClinician = User::where('email', 'wanjiku@autisync.test')->firstOrFail();
+        $this->assertSame('clinician', $newClinician->role);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('ClinicianPass123!', $newClinician->password));
+
+        // 3. Administrator can assign and unassign clinicians to children
+        $this->actingAs($admin)
+            ->post(route('administrator.children.assign-clinician', $child), [
+                'clinician_id' => $newClinician->id,
+            ])
+            ->assertRedirect(route('administrator.dashboard'))
+            ->assertSessionHas('success');
+
+        $this->assertTrue($child->clinicians()->where('users.id', $newClinician->id)->exists());
+
+        // 4. Administrator can update another user's role; changing a clinician to caregiver detaches caseload
+        $this->actingAs($admin)
+            ->patch(route('administrator.users.update-role', $newClinician), [
+                'role' => 'caregiver',
+            ])
+            ->assertRedirect(route('administrator.dashboard'))
+            ->assertSessionHas('success');
+
+        $this->assertSame('caregiver', $newClinician->fresh()->role);
+        $this->assertFalse($child->clinicians()->where('users.id', $newClinician->id)->exists());
+
+        // 5. Privilege Safeguard: Administrator cannot modify their own role
+        $this->actingAs($admin)
+            ->patch(route('administrator.users.update-role', $admin), [
+                'role' => 'caregiver',
+            ])
+            ->assertSessionHasErrors('role');
+
+        $this->assertSame('administrator', $admin->fresh()->role);
+
+        // 6. Administrator can assign and unassign Dr. Kamau
+        $this->actingAs($admin)
+            ->post(route('administrator.children.assign-clinician', $child), [
+                'clinician_id' => $clinician->id,
+            ])
+            ->assertRedirect(route('administrator.dashboard'));
+        $this->assertTrue($child->clinicians()->where('users.id', $clinician->id)->exists());
+
+        $this->actingAs($admin)
+            ->delete(route('administrator.children.unassign-clinician', [$child, $clinician]))
+            ->assertRedirect(route('administrator.dashboard'))
+            ->assertSessionHas('success');
+        $this->assertFalse($child->clinicians()->where('users.id', $clinician->id)->exists());
+    }
 }
 

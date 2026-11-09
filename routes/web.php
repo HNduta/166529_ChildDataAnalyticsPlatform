@@ -103,6 +103,18 @@ Route::middleware(['auth', 'role:administrator'])->group(function () {
 
     Route::get('/admin/dashboard', [AdministratorDashboardController::class, 'index'])
         ->name('administrator.dashboard');
+
+    Route::post('/admin/users', [AdministratorDashboardController::class, 'storeUser'])
+        ->name('administrator.users.store');
+
+    Route::patch('/admin/users/{user}/role', [AdministratorDashboardController::class, 'updateUserRole'])
+        ->name('administrator.users.update-role');
+
+    Route::post('/admin/children/{child}/assign-clinician', [AdministratorDashboardController::class, 'assignClinician'])
+        ->name('administrator.children.assign-clinician');
+
+    Route::delete('/admin/children/{child}/clinicians/{clinician}', [AdministratorDashboardController::class, 'unassignClinician'])
+        ->name('administrator.children.unassign-clinician');
 });
 
 require __DIR__.'/auth.php';
