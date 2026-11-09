@@ -58,6 +58,21 @@ Route::middleware(['auth', 'role:clinician'])->group(function () {
     Route::get('/clinician/dashboard', [ClinicianDashboardController::class, 'index'])
         ->name('clinician.dashboard');
 
+    Route::get('/clinician/children/{child}', [ClinicianDashboardController::class, 'showChild'])
+        ->name('clinician.children.show');
+
+    Route::post('/clinician/children/{child}/goals', [ClinicianDashboardController::class, 'storeGoal'])
+        ->name('clinician.goals.store');
+
+    Route::patch('/clinician/children/{child}/goals/{goal}', [ClinicianDashboardController::class, 'updateGoal'])
+        ->name('clinician.goals.update');
+
+    Route::post('/clinician/children/{child}/goals/{goal}/milestones', [ClinicianDashboardController::class, 'storeMilestone'])
+        ->name('clinician.milestones.store');
+
+    Route::patch('/clinician/children/{child}/milestones/{milestone}', [ClinicianDashboardController::class, 'toggleMilestone'])
+        ->name('clinician.milestones.toggle');
+
     Route::post(
         '/behavioural-records/{behaviouralRecord}/predict',
         [PredictionController::class, 'generate']
