@@ -41,8 +41,10 @@
     $admin = auth()->user();
     $adminAvatarUrl = $admin?->profilePictureUrl();
     $practitioners = $practitioners ?? collect();
+    $clinicians = $clinicians ?? $practitioners->where('role', 'clinician')->values();
+    $children = $children ?? collect();
     $totalUsersCount = $totalUsersCount ?? $practitioners->count();
-    $clinicianCount = $clinicianCount ?? $practitioners->where('role', 'clinician')->count();
+    $clinicianCount = $clinicianCount ?? $clinicians->count();
     $caregiverCount = $caregiverCount ?? $practitioners->where('role', 'caregiver')->count();
     $adminCount = $adminCount ?? $practitioners->where('role', 'administrator')->count();
     $childrenCount = $childrenCount ?? 0;
@@ -87,13 +89,21 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
                         Admin Control
                     </a>
-                    <a href="#system-health-panel" class="navlink">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
-                        Service &amp; Model Health
+                    <a href="#user-onboarding-section" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M18 8v6M15 11h6"/></svg>
+                        Onboard New User
                     </a>
                     <a href="#practitioners-directory" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M17 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
                         Users &amp; Roles ({{ $totalUsersCount }})
+                    </a>
+                    <a href="#caseload-governance-section" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Caseload Assignments ({{ $childrenCount }})
+                    </a>
+                    <a href="#system-health-panel" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+                        Service &amp; Model Health
                     </a>
                 </div>
             </div>
@@ -131,7 +141,7 @@
 
         {{-- Topbar --}}
         <header class="min-h-16 flex items-center gap-4 px-4 sm:px-8 py-2 border-b border-[var(--line)] bg-white sticky top-0 z-10">
-            <p class="hidden sm:block font-semibold text-[15px]">Platform &amp; Service Oversight</p>
+            <p class="hidden sm:block font-semibold text-[15px]">Platform &amp; User Governance</p>
 
             <div class="flex-1 max-w-md ml-0 sm:ml-6">
                 <div class="relative flex items-center">
@@ -173,11 +183,22 @@
 
         <main class="px-4 sm:px-8 py-6 space-y-6">
 
-            {{-- Flash Messages --}}
+            {{-- Flash & Validation Alerts --}}
             @if (session('success') || session('status'))
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 flex items-center gap-2.5" role="status">
                     <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>{{ session('success') ?? session('status') }}</span>
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                    <p class="font-semibold">Please check the following:</p>
+                    <ul class="mt-1.5 list-disc list-inside text-xs space-y-0.5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
             @endif
 
@@ -192,18 +213,18 @@
                         System Health &amp; Governance
                     </h1>
                     <p class="text-[var(--ink-soft)] text-sm leading-relaxed">
-                        Welcome to the AutiSync Analytics administrative control center. Monitor live PostgreSQL platform activity, inspect FastAPI prediction service reachability, and oversee role-based access across caregivers, clinicians, and administrators.
+                        Welcome to the AutiSync Analytics administrative control center. Onboard specialist clinicians and caregivers, manage role-based privileges with strict safeguards, assign clinical caseloads, and monitor live FastAPI and PostgreSQL status.
                     </p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
-                    <a href="#system-health-panel" class="inline-flex items-center gap-2 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
-                        Service Health
+                    <a href="#user-onboarding-section" class="inline-flex items-center gap-2 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M18 8v6M15 11h6"/></svg>
+                        Onboard New User
                     </a>
-                    <a href="#practitioners-directory" class="inline-flex items-center gap-2 border border-[var(--accent-soft)] bg-white text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">
+                    <a href="#caseload-governance-section" class="inline-flex items-center gap-2 border border-[var(--accent-soft)] bg-white text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6"/></svg>
-                        User Directory ({{ $totalUsersCount }})
+                        Caseload Assignments ({{ $childrenCount }})
                     </a>
                 </div>
             </section>
@@ -338,6 +359,90 @@
                 </div>
             </section>
 
+            {{-- ===================== USER ONBOARDING SECTION ===================== --}}
+            <section id="user-onboarding-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
+                <div class="mb-4 pb-4 border-b border-[var(--line)]">
+                    <p class="eyebrow uppercase mb-0.5">Practitioner &amp; Caregiver Onboarding</p>
+                    <h2 class="text-lg font-bold tracking-tight">Onboard New Platform User</h2>
+                    <p class="text-xs text-[var(--ink-soft)] mt-0.5">
+                        Create verified accounts for Specialist Clinicians, Caregivers, or Administrators directly from the governance portal.
+                    </p>
+                </div>
+
+                <form method="POST" action="{{ route('administrator.users.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+                    @csrf
+                    <div>
+                        <label for="onboard_name" class="block text-xs font-semibold mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            id="onboard_name"
+                            name="name"
+                            value="{{ old('name') }}"
+                            required
+                            placeholder="e.g. Dr. Amina Wanjiku"
+                            class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2 text-xs text-[var(--ink)] focus:bg-white focus:outline-none"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="onboard_email" class="block text-xs font-semibold mb-1">Email Address</label>
+                        <input
+                            type="email"
+                            id="onboard_email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            required
+                            placeholder="clinician@autisync.org"
+                            class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2 text-xs text-[var(--ink)] focus:bg-white focus:outline-none"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="onboard_role" class="block text-xs font-semibold mb-1">Assigned Role</label>
+                        <select
+                            id="onboard_role"
+                            name="role"
+                            required
+                            class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2 text-xs font-semibold text-[var(--ink)] focus:bg-white focus:outline-none"
+                        >
+                            <option value="clinician" {{ old('role', 'clinician') === 'clinician' ? 'selected' : '' }}>Clinician</option>
+                            <option value="caregiver" {{ old('role') === 'caregiver' ? 'selected' : '' }}>Caregiver</option>
+                            <option value="administrator" {{ old('role') === 'administrator' ? 'selected' : '' }}>Administrator</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="onboard_password" class="block text-xs font-semibold mb-1">Password</label>
+                        <input
+                            type="password"
+                            id="onboard_password"
+                            name="password"
+                            required
+                            placeholder="Min 8 characters"
+                            class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2 text-xs text-[var(--ink)] focus:bg-white focus:outline-none"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="onboard_password_confirmation" class="block text-xs font-semibold mb-1">Confirm Password</label>
+                        <input
+                            type="password"
+                            id="onboard_password_confirmation"
+                            name="password_confirmation"
+                            required
+                            placeholder="Repeat password"
+                            class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2 text-xs text-[var(--ink)] focus:bg-white focus:outline-none"
+                        >
+                    </div>
+
+                    <div>
+                        <button type="submit" class="w-full bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                            + Create User Account
+                        </button>
+                    </div>
+                </form>
+            </section>
+
             {{-- ===================== ROLE FILTER TABS & SEARCH ===================== --}}
             <section class="flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-1 bg-white border border-[var(--line)] rounded-xl p-1">
@@ -356,13 +461,13 @@
                 </div>
             </section>
 
-            {{-- ===================== ACTIVE PRACTITIONERS & USERS TABLE ===================== --}}
+            {{-- ===================== ACTIVE PRACTITIONERS & USERS TABLE (WITH ROLE GOVERNANCE) ===================== --}}
             <section id="practitioners-directory" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
                     <div>
                         <h2 class="text-lg font-bold tracking-tight">Active Practitioners &amp; Platform Users</h2>
                         <p class="text-[13px] text-[var(--ink-soft)]">
-                            Monitor registered caregivers, clinicians, and administrators with live child and caseload counts.
+                            Search and filter registered accounts in real time, and manage user roles with built-in privilege safeguards.
                         </p>
                     </div>
                 </div>
@@ -376,7 +481,7 @@
                                 <th class="py-2.5 px-2 font-semibold">Profiles / Caseload</th>
                                 <th class="py-2.5 px-2 font-semibold">Status</th>
                                 <th class="py-2.5 px-2 font-semibold">Last Activity</th>
-                                <th class="py-2.5 px-2 font-semibold text-right">Actions</th>
+                                <th class="py-2.5 px-2 font-semibold text-right">Role Governance</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-[var(--line)]">
@@ -384,6 +489,7 @@
                                 @php
                                     $practitionerAvatarUrl = $practitioner->profilePictureUrl();
                                     $pRole = strtolower($practitioner->role ?? 'caregiver');
+                                    $isSelf = (int) $practitioner->id === (int) auth()->id();
                                 @endphp
                                 <tr
                                     class="admin-user-row hover:bg-[var(--canvas)]/50 transition"
@@ -428,11 +534,36 @@
                                     <td class="py-3 px-2 text-xs text-[var(--ink-soft)]">
                                         {{ $practitioner->updated_at?->diffForHumans() ?? 'Recently' }}
                                     </td>
-                                    <td class="py-3 px-2 text-right">
-                                        @if ((int) $practitioner->id === (int) auth()->id())
-                                            <a href="{{ route('profile.edit') }}" class="text-xs font-semibold text-[var(--ink)] hover:underline">Edit My Profile</a>
+                                    <td class="py-3 px-2 text-right whitespace-nowrap">
+                                        @if ($isSelf)
+                                            <div class="inline-flex items-center gap-2">
+                                                <span class="text-[11px] font-semibold text-[var(--ink-soft)] bg-[var(--canvas)] border border-[var(--line)] px-2.5 py-1 rounded-md">
+                                                    Protected (Your Account)
+                                                </span>
+                                                <a href="{{ route('profile.edit') }}" class="text-xs font-semibold text-[var(--ink)] hover:underline">
+                                                    Profile
+                                                </a>
+                                            </div>
                                         @else
-                                            <span class="text-xs text-[var(--ink-soft)]">Role-Scoped Auth</span>
+                                            <form method="POST" action="{{ route('administrator.users.update-role', $practitioner) }}" class="inline-flex items-center justify-end gap-1.5">
+                                                @csrf
+                                                @method('PATCH')
+                                                <select
+                                                    name="role"
+                                                    aria-label="Update role for {{ $practitioner->name }}"
+                                                    class="rounded-md border border-[var(--line)] bg-[var(--canvas)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] focus:bg-white focus:outline-none"
+                                                >
+                                                    <option value="caregiver" {{ $pRole === 'caregiver' ? 'selected' : '' }}>Caregiver</option>
+                                                    <option value="clinician" {{ $pRole === 'clinician' ? 'selected' : '' }}>Clinician</option>
+                                                    <option value="administrator" {{ $pRole === 'administrator' ? 'selected' : '' }}>Administrator</option>
+                                                </select>
+                                                <button
+                                                    type="submit"
+                                                    class="rounded-md border border-[var(--ink)] bg-white text-[var(--ink)] hover:bg-[var(--ink)] hover:text-white text-xs font-semibold px-2.5 py-1 transition"
+                                                >
+                                                    Update Role
+                                                </button>
+                                            </form>
                                         @endif
                                     </td>
                                 </tr>
@@ -452,6 +583,114 @@
                         Showing {{ $practitioners->count() }} of {{ $totalUsersCount }} registered users
                     </p>
                 </div>
+            </section>
+
+            {{-- ===================== CLINICIAN-CHILD CASELOAD ASSIGNMENT GOVERNANCE ===================== --}}
+            <section id="caseload-governance-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
+                <div class="mb-5 pb-4 border-b border-[var(--line)]">
+                    <p class="eyebrow uppercase mb-0.5">Clinical Caseload Governance</p>
+                    <h2 class="text-lg font-bold tracking-tight">Clinician–Child Caseload Assignments ({{ $children->count() }})</h2>
+                    <p class="text-xs text-[var(--ink-soft)] mt-0.5">
+                        Assign or unassign specialist clinicians to registered children so authorized practitioners can record assessments, set therapy goals, and approve progress summaries.
+                    </p>
+                </div>
+
+                @if ($children->isNotEmpty())
+                    <div class="overflow-x-auto -mx-1">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs text-[var(--ink-soft)] font-semibold border-b border-[var(--line)]">
+                                    <th class="py-2.5 px-2">Child Profile</th>
+                                    <th class="py-2.5 px-2">Caregiver</th>
+                                    <th class="py-2.5 px-2">Assigned Clinicians</th>
+                                    <th class="py-2.5 px-2 text-right">Assign Specialist Clinician</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[var(--line)]">
+                                @foreach ($children as $childItem)
+                                    @php
+                                        $childPic = $childItem->profilePictureUrl();
+                                    @endphp
+                                    <tr class="hover:bg-[var(--canvas)]/50 transition">
+                                        <td class="py-3 px-2">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 shrink-0 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center overflow-hidden text-xs font-bold text-[var(--accent)]">
+                                                    @if ($childPic)
+                                                        <img src="{{ $childPic }}" alt="{{ $childItem->first_name }}" class="w-full h-full object-cover">
+                                                    @else
+                                                        {{ $childItem->initials() }}
+                                                    @endif
+                                                </div>
+                                                <div>
+                                                    <p class="font-bold text-xs text-[var(--ink)]">{{ $childItem->first_name }}</p>
+                                                    <p class="text-[11px] text-[var(--ink-soft)]">{{ $childItem->age_in_months }} mos · {{ $childItem->sex }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="py-3 px-2 text-xs">
+                                            <p class="font-semibold">{{ $childItem->caregiver->name ?? 'Caregiver' }}</p>
+                                            <p class="text-[11px] text-[var(--ink-soft)]">{{ $childItem->caregiver->email ?? '' }}</p>
+                                        </td>
+
+                                        <td class="py-3 px-2">
+                                            @if ($childItem->clinicians->isNotEmpty())
+                                                <div class="flex flex-wrap items-center gap-1.5">
+                                                    @foreach ($childItem->clinicians as $assignedClinician)
+                                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                                                            <span>{{ $assignedClinician->name }}</span>
+                                                            <form method="POST" action="{{ route('administrator.children.unassign-clinician', [$childItem, $assignedClinician]) }}" class="inline">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" title="Remove {{ $assignedClinician->name }}" class="text-emerald-700 hover:text-red-600 font-bold leading-none">
+                                                                    ✕
+                                                                </button>
+                                                            </form>
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                                                    Unassigned
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <td class="py-3 px-2 text-right whitespace-nowrap">
+                                            @if ($clinicians->isNotEmpty())
+                                                <form method="POST" action="{{ route('administrator.children.assign-clinician', $childItem) }}" class="inline-flex items-center justify-end gap-1.5">
+                                                    @csrf
+                                                    <select
+                                                        name="clinician_id"
+                                                        required
+                                                        class="rounded-md border border-[var(--line)] bg-[var(--canvas)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] focus:bg-white focus:outline-none"
+                                                    >
+                                                        <option value="">Select clinician...</option>
+                                                        @foreach ($clinicians as $clinOption)
+                                                            <option value="{{ $clinOption->id }}">{{ $clinOption->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button
+                                                        type="submit"
+                                                        class="rounded-md bg-[var(--ink)] text-white text-xs font-semibold px-3 py-1 hover:opacity-90 transition"
+                                                    >
+                                                        Assign
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs text-[var(--ink-soft)] italic">Onboard a clinician above first</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="border border-dashed border-[var(--line)] rounded-xl p-8 text-center">
+                        <p class="text-sm font-semibold">No child profiles registered yet</p>
+                    </div>
+                @endif
             </section>
 
         </main>
