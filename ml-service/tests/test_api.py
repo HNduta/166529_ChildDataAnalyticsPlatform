@@ -90,3 +90,28 @@ def test_unexpected_field_is_rejected(client):
     response = client.post("/predict", json=payload)
 
     assert response.status_code == 422
+
+
+def test_saved_pipeline_structure_and_leakage_safe_preprocessing():
+    """Verify the saved scikit-learn pipeline steps, 14-feature contract, and training split metadata."""
+    import joblib
+
+    model_path = ML_SERVICE_DIR / "models" / "child_intervention_pipeline.joblib"
+    assert model_path.is_file()
+
+    pipeline = joblib.load(model_path)
+    assert list(pipeline.named_steps.keys()) == ["prep", "model"]
+
+    prep = pipeline.named_steps["prep"]
+    clf = pipeline.named_steps["model"]
+
+    # Verify preprocessing is encapsulated inside ColumnTransformer fitted on N = 1,083 training samples
+    num_transformer = prep.named_transformers_["num"]
+    cat_transformer = prep.named_transformers_["cat"]
+    assert int(num_transformer.named_steps["scaler"].n_samples_seen_) == 1083
+    assert len(prep.feature_names_in_) == 14
+
+    # Verify binary classes [0, 1] and balanced class weighting for minority class protection
+    assert list(clf.classes_) == [0, 1]
+    assert clf.class_weight == "balanced"
+
