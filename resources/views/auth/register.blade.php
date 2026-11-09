@@ -81,8 +81,55 @@
 
             </ul>
 
-            {{-- Decorative Illustration Placeholder --}}
-            <div class="flex-1 min-h-[220px] rounded-2xl skel"></div>
+            {{-- User-Supplied Registration Image or Clearly Identified Placeholder --}}
+            @php
+                $registerImageCandidates = [
+                    'images/auth/register.png',
+                    'images/auth/register.jpg',
+                    'images/auth/register.jpeg',
+                    'images/auth/register.webp',
+                    'images/auth/register-illustration.png',
+                    'images/auth/register-illustration.jpg',
+                    'images/auth/register-illustration.jpeg',
+                    'images/auth/register-illustration.webp',
+                ];
+                $registerImagePath = null;
+                foreach ($registerImageCandidates as $candidate) {
+                    if (is_file(public_path($candidate))) {
+                        $registerImagePath = $candidate;
+                        break;
+                    }
+                }
+            @endphp
+
+            <div class="flex-1 min-h-[240px] rounded-2xl overflow-hidden border border-[var(--line)] bg-[var(--canvas)] flex flex-col">
+                @if ($registerImagePath)
+                    <img
+                        src="{{ asset($registerImagePath) }}"
+                        alt="AutiSync Caregiver Registration"
+                        class="w-full h-full object-cover flex-1"
+                    >
+                @else
+                    <div id="register-image-placeholder" class="flex-1 p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-[var(--accent-soft)] rounded-2xl bg-[var(--accent-tint)]/50">
+                        <div class="w-12 h-12 rounded-2xl bg-white border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)] mb-3 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 20"/>
+                            </svg>
+                        </div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)] bg-white border border-[var(--accent-soft)] px-2.5 py-0.5 rounded-full mb-2">
+                            Registration Image Placeholder
+                        </span>
+                        <p class="text-sm font-bold text-[var(--ink)] max-w-xs">
+                            A welcoming space for caregivers to record everyday milestones and observations
+                        </p>
+                        <p class="text-xs text-[var(--ink-soft)] mt-1.5 max-w-xs leading-relaxed">
+                            Place your custom registration page image at <code class="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-[var(--line)]">public/images/auth/register.jpg</code> (or <code class="font-mono text-[11px]">.png</code> / <code class="font-mono text-[11px]">.webp</code>) to display it here automatically.
+                        </p>
+                    </div>
+                @endif
+            </div>
 
             {{-- Footer --}}
             <p class="text-[12px] text-[var(--ink-soft)] mt-8">
@@ -98,19 +145,33 @@
 
             <div class="w-full max-w-sm">
 
-                {{-- Mobile Brand --}}
-                <div class="lg:hidden flex items-center gap-2 mb-8">
-
-                    <div class="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-white text-sm font-bold">
-                        A
+                {{-- Mobile Brand & Visual Banner --}}
+                <div class="lg:hidden mb-6 space-y-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-white text-sm font-bold">
+                            A
+                        </div>
+                        <span class="text-[15px] font-bold tracking-tight">
+                            AutiSync
+                        </span>
                     </div>
 
-                    <span class="text-[15px] font-bold tracking-tight">
-                        AutiSync
-                    </span>
-
+                    @if ($registerImagePath)
+                        <div class="h-36 rounded-2xl overflow-hidden border border-[var(--line)] bg-white">
+                            <img src="{{ asset($registerImagePath) }}" alt="AutiSync Registration" class="w-full h-full object-cover">
+                        </div>
+                    @else
+                        <div class="p-3.5 rounded-xl border border-dashed border-[var(--accent-soft)] bg-[var(--accent-tint)]/50 text-xs text-[var(--ink-soft)] flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)] shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-[var(--ink)]">Registration Image Placeholder</p>
+                                <p class="text-[11px]">Supply <code class="font-mono">public/images/auth/register.jpg</code></p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
-
 
                 {{-- Heading --}}
                 <h2 class="text-2xl font-extrabold tracking-tight mb-1.5">
@@ -152,6 +213,7 @@
                 {{-- ===================== REGISTER FORM ===================== --}}
                 <form method="POST"
                       action="{{ route('register') }}"
+                      enctype="multipart/form-data"
                       class="space-y-5">
 
                     @csrf
@@ -378,6 +440,43 @@
                     </div>
 
 
+                    {{-- Optional Profile Picture Upload --}}
+                    <div>
+                        <label
+                            for="profile_picture"
+                            class="block text-[13px] font-semibold mb-1.5">
+                            Profile Picture <span class="text-[var(--ink-soft)] font-normal">(Optional)</span>
+                        </label>
+
+                        <div class="flex items-center gap-3 bg-white border border-[var(--line)] rounded-lg p-2.5">
+                            <div id="registerAvatarPreviewBox" class="w-10 h-10 shrink-0 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center overflow-hidden text-[var(--accent)]">
+                                <svg id="registerAvatarIcon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="8" r="4"/>
+                                    <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
+                                </svg>
+                                <img id="registerAvatarPreviewImg" src="" alt="Selected profile preview" class="hidden w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <input
+                                    id="profile_picture"
+                                    type="file"
+                                    name="profile_picture"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    class="block w-full text-xs text-[var(--ink-soft)] file:mr-2.5 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[var(--canvas)] file:text-[var(--ink)] hover:file:bg-[#efe7dc] cursor-pointer"
+                                >
+                                <p class="text-[11px] text-[var(--ink-soft)] mt-1">
+                                    JPG, PNG, or WEBP up to 2 MB.
+                                </p>
+                            </div>
+                        </div>
+
+                        @error('profile_picture')
+                            <p class="text-xs text-red-600 mt-1.5">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
                     {{--
                         Account type — informational only, not a selectable field.
                         No input is submitted for this; the backend keeps assigning
@@ -474,6 +573,25 @@
 
             bindToggle('password', 'togglePassword');
             bindToggle('password_confirmation', 'togglePasswordConfirm');
+
+            const fileInput = document.getElementById('profile_picture');
+            const previewImg = document.getElementById('registerAvatarPreviewImg');
+            const previewIcon = document.getElementById('registerAvatarIcon');
+
+            if (fileInput && previewImg && previewIcon) {
+                fileInput.addEventListener('change', function (e) {
+                    const file = e.target.files && e.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function (ev) {
+                            previewImg.src = ev.target.result;
+                            previewImg.classList.remove('hidden');
+                            previewIcon.classList.add('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
 
         });
     </script>

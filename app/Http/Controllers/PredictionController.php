@@ -174,4 +174,44 @@ class PredictionController extends Controller
 
         return response()->json($predictions);
     }
+
+    public function validatePrediction(
+        Request $request,
+        Prediction $prediction
+    ) {
+        abort_unless(
+            $request->user()
+                && $request->user()->role === 'clinician',
+            403
+        );
+
+        $assigned = $prediction->child()
+            ->whereHas('clinicians', function ($query) use ($request) {
+                $query->where('users.id', $request->user()->id);
+            })
+            ->exists();
+
+        abort_unless($assigned, 403);
+
+        $validated = $request->validate([
+            'validated_by_clinician' => ['required', 'boolean'],
+            'clinician_feedback' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $prediction->update([
+            'validated_by_clinician' => $request->boolean('validated_by_clinician'),
+            'clinician_feedback' => $validated['clinician_feedback'] ?? null,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Prediction validation updated successfully.',
+                'prediction' => $prediction->fresh(['child', 'observation']),
+            ]);
+        }
+
+        return redirect()
+            ->route('clinician.dashboard')
+            ->with('success', 'Clinical validation and specialist feedback saved successfully.');
+    }
 }

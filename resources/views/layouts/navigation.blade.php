@@ -65,8 +65,18 @@
                     <x-slot name="trigger">
 
                         <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150"
+                            class="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150"
                         >
+                            @php
+                                $navAvatarUrl = Auth::user()->profilePictureUrl();
+                            @endphp
+                            <span class="w-7 h-7 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden text-xs font-semibold text-gray-700">
+                                @if($navAvatarUrl)
+                                    <img src="{{ $navAvatarUrl }}" alt="{{ Auth::user()->name }}" class="w-full h-full object-cover">
+                                @else
+                                    {{ Auth::user()->initials() }}
+                                @endif
+                            </span>
 
                             <div>{{ Auth::user()->name }}</div>
 
@@ -91,6 +101,10 @@
                     </x-slot>
 
                     <x-slot name="content">
+
+                        <x-dropdown-link :href="route('profile.edit')">
+                            {{ __('Profile Settings') }}
+                        </x-dropdown-link>
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">

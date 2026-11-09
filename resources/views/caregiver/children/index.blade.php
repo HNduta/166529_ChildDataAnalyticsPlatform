@@ -184,6 +184,17 @@
 
             </div>
 
+            {{-- Account Settings --}}
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
     </aside>
@@ -253,12 +264,16 @@
 
 
                 {{-- Registered Caregiver --}}
-                <div class="flex items-center gap-2.5">
-
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $userAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
 
                     <div class="hidden sm:block leading-tight">
@@ -273,7 +288,7 @@
 
                     </div>
 
-                </div>
+                </a>
 
 
                 {{-- Logout --}}
@@ -348,19 +363,24 @@
 
                                 <div class="flex items-center gap-3">
 
-                                    <div class="w-12 h-12 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center">
-
-                                        <svg
-                                            class="w-6 h-6 text-[var(--accent)]"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.5"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <circle cx="12" cy="8" r="4"/>
-                                            <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
-                                        </svg>
-
+                                    @php
+                                        $childAvatarUrl = $child->profilePictureUrl();
+                                    @endphp
+                                    <div class="w-12 h-12 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center overflow-hidden">
+                                        @if ($childAvatarUrl)
+                                            <img src="{{ $childAvatarUrl }}" alt="{{ $child->first_name }}" class="w-full h-full object-cover">
+                                        @else
+                                            <svg
+                                                class="w-6 h-6 text-[var(--accent)]"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="1.5"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle cx="12" cy="8" r="4"/>
+                                                <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
+                                            </svg>
+                                        @endif
                                     </div>
 
 

@@ -73,6 +73,16 @@
                     </a>
                 </div>
             </div>
+
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
         </nav>
     </aside>
 
@@ -116,12 +126,16 @@
 
 
     {{-- User Information --}}
-    <div class="flex items-center gap-2.5">
-
-        <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-
-            {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-
+    <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+        @php
+            $adminAvatarUrl = auth()->user()?->profilePictureUrl();
+        @endphp
+        <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+            @if ($adminAvatarUrl)
+                <img src="{{ $adminAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+            @else
+                {{ auth()->user()->initials() }}
+            @endif
         </div>
 
         <div class="hidden sm:block leading-tight">
@@ -136,7 +150,7 @@
 
         </div>
 
-    </div>
+    </a>
 
 
     {{-- Logout --}}
@@ -291,24 +305,68 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{-- DATA: @forelse($practitioners as $user) ... row per user ... @empty --}}
-                            <tr>
-                                <td colspan="6" class="py-12 text-center">
-                                    <div class="w-11 h-11 mx-auto rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center mb-3">
-                                        <svg class="w-5 h-5 text-[var(--ink-soft)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M17 11a3 3 0 100-6 3 3 0 000 6zM21 21c0-3-2-5-4.5-5.5"/></svg>
-                                    </div>
-                                    <p class="text-sm font-semibold mb-1">No registered users yet</p>
-                                    <p class="text-[13px] text-[var(--ink-soft)]">Add a user to start managing access levels and verification status.</p>
-                                </td>
-                            </tr>
-                            {{-- @endforelse --}}
+                            @forelse(($practitioners ?? collect()) as $practitioner)
+                                @php
+                                    $practitionerAvatarUrl = $practitioner->profilePictureUrl();
+                                @endphp
+                                <tr class="border-b border-[var(--line)] last:border-b-0">
+                                    <td class="py-3 px-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 shrink-0 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                                                @if ($practitionerAvatarUrl)
+                                                    <img src="{{ $practitionerAvatarUrl }}" alt="{{ $practitioner->name }}" class="w-full h-full object-cover">
+                                                @else
+                                                    {{ $practitioner->initials() }}
+                                                @endif
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-[13px]">{{ $practitioner->name }}</p>
+                                                <p class="text-[11.5px] text-[var(--ink-soft)]">{{ $practitioner->email }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-1">
+                                        <span class="text-xs font-semibold bg-[var(--canvas)] border border-[var(--line)] px-2.5 py-0.5 rounded-full">
+                                            {{ ucfirst($practitioner->role ?? 'caregiver') }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-1">
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            Active
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-1 text-xs text-[var(--ink-soft)]">
+                                        {{ $practitioner->updated_at?->diffForHumans() ?? 'Recently' }}
+                                    </td>
+                                    <td class="py-3 px-1 text-xs text-[var(--ink-soft)]">
+                                        Role-Scoped Auth
+                                    </td>
+                                    <td class="py-3 px-1 text-right">
+                                        @if ((int) $practitioner->id === (int) auth()->id())
+                                            <a href="{{ route('profile.edit') }}" class="text-xs font-semibold text-[var(--ink)] hover:underline">Edit My Profile</a>
+                                        @else
+                                            <span class="text-xs text-[var(--ink-soft)]">Verified</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="py-12 text-center">
+                                        <div class="w-11 h-11 mx-auto rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center mb-3">
+                                            <svg class="w-5 h-5 text-[var(--ink-soft)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M17 11a3 3 0 100-6 3 3 0 000 6zM21 21c0-3-2-5-4.5-5.5"/></svg>
+                                        </div>
+                                        <p class="text-sm font-semibold mb-1">No registered users yet</p>
+                                        <p class="text-[13px] text-[var(--ink-soft)]">Add a user to start managing access levels and verification status.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
                 <div class="flex items-center justify-between mt-5 pt-4 border-t border-[var(--line)]">
-                    {{-- DATA: "Showing {count} of {total} registered users" --}}
-                    <p class="text-[12.5px] text-[var(--ink-soft)]">Showing 0 of 0 registered users</p>
+                    <p class="text-[12.5px] text-[var(--ink-soft)]">Showing {{ isset($practitioners) ? $practitioners->count() : 0 }} of {{ $totalUsersCount ?? 0 }} registered users</p>
                     <div class="flex items-center gap-2">
                         <button disabled class="text-[13px] font-semibold border border-[var(--line)] px-3.5 py-1.5 rounded-lg text-[var(--ink-soft)] disabled:opacity-50">Previous</button>
                         <button disabled class="text-[13px] font-semibold border border-[var(--line)] px-3.5 py-1.5 rounded-lg text-[var(--ink-soft)] disabled:opacity-50">Next</button>

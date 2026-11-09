@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $child->first_name }} · Support Recommendations · AutiSync</title>
+    <title>{{ $child->first_name }} · Everyday Support Ideas · AutiSync</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -58,6 +58,8 @@
     $avgSocial = $avgSocial ?? $child->behaviouralRecords()->avg('social_interaction_score');
     $avgEngagement = $avgEngagement ?? $child->behaviouralRecords()->avg('engagement_level');
     $avgRepetitive = $avgRepetitive ?? $child->behaviouralRecords()->avg('repetitive_behaviour_score');
+    $userAvatarUrl = auth()->user()?->profilePictureUrl();
+    $childAvatarUrl = $child->profilePictureUrl();
 @endphp
 
 <div class="flex min-h-screen">
@@ -118,6 +120,17 @@
                 </div>
             </div>
 
+            {{-- Account Settings --}}
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
     </aside>
@@ -135,7 +148,7 @@
             <div class="flex-1 max-w-md ml-0 sm:ml-6">
                 <div class="relative flex items-center">
                     <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-soft)] pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                    <input type="text" id="topbar-rec-search" oninput="document.getElementById('rec-search-input').value = this.value; searchRecs();" placeholder="Search recommendations..."
+                    <input type="text" id="topbar-rec-search" oninput="document.getElementById('rec-search-input').value = this.value; searchRecs();" placeholder="Search home activities..."
                            class="w-full bg-[var(--canvas)] border border-[var(--line)] rounded-lg pl-9 pr-20 py-2 text-sm placeholder:text-[var(--ink-soft)] focus:bg-white focus:outline-none">
                     <button type="button" onclick="document.getElementById('rec-search-input').value = document.getElementById('topbar-rec-search').value; searchRecs();" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[var(--ink)] text-white text-xs font-semibold px-2.5 py-1 rounded-md hover:opacity-90 transition">
                         Search
@@ -152,15 +165,19 @@
                 </button>
 
                 {{-- User --}}
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
                     <div class="hidden sm:block leading-tight">
                         <p class="text-[13px] font-semibold">{{ auth()->user()->name }}</p>
                         <p class="text-[11px] text-[var(--ink-soft)]">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
-                </div>
+                </a>
 
                 {{-- Logout --}}
                 <form method="POST" action="{{ route('logout') }}">
@@ -178,12 +195,24 @@
         {{-- ============================= PAGE CONTENT ============================= --}}
         <main class="px-4 sm:px-8 py-8">
 
+            {{-- Flash Status Messages --}}
+            @if (session('success'))
+                <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 flex items-center gap-2.5" role="status">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
             {{-- ===================== CHILD PROFILE HEADER ===================== --}}
             <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
 
                 <div class="flex items-start gap-4">
-                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center">
-                        <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center overflow-hidden">
+                        @if ($childAvatarUrl)
+                            <img src="{{ $childAvatarUrl }}" alt="{{ $child->first_name }} profile picture" class="w-full h-full object-cover">
+                        @else
+                            <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        @endif
                     </div>
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -244,28 +273,28 @@
             {{-- ===================== PAGE HEADING ===================== --}}
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6 pb-6 border-b border-[var(--line)]">
                 <div>
-                    <p class="eyebrow uppercase mb-1">Insight Center</p>
-                    <h2 class="text-2xl sm:text-[28px] font-extrabold tracking-tight">Support Recommendations</h2>
-                    <p class="text-[13px] text-[var(--ink-soft)] mt-1 max-w-3xl">
-                        Evidence-informed interventions and supportive strategies based on active monitoring and recorded behavioral patterns for {{ $child->first_name }}.
+                    <p class="eyebrow uppercase mb-1">Everyday Home Support Guide</p>
+                    <h2 class="text-2xl sm:text-[28px] font-extrabold tracking-tight">Support Recommendations for {{ $child->first_name }}</h2>
+                    <p class="text-[13px] text-[var(--ink-soft)] mt-1 max-w-3xl leading-relaxed">
+                        Practical, step-by-step activities you can try during everyday routines at home — tailored to {{ $child->first_name }}'s recorded observations and developmental focus areas. Every child grows at their own pace, and even small moments of connection make a real difference.
                     </p>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-white text-xs font-semibold text-[var(--ink-soft)]">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        Decision Support Active
-                    </span>
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    <a href="{{ route('behavioural-records.create') }}?child_id={{ $child->id }}"
+                       class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                        <span>+</span> Log Home Observation Note
+                    </a>
                 </div>
             </div>
 
 
-            {{-- ===================== 3 KPI SUMMARY CARDS ===================== --}}
+            {{-- ===================== 3 CAREGIVER SUMMARY CARDS ===================== --}}
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                {{-- Active / Urgent Actions --}}
+                {{-- Activities to Try --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                        <span class="eyebrow uppercase">Active Actions</span>
+                        <span class="eyebrow uppercase">Activities to Try</span>
                         <div class="w-7 h-7 rounded-lg bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)]">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
                         </div>
@@ -274,39 +303,39 @@
                         {{ str_pad($activeCount, 2, '0', STR_PAD_LEFT) }}
                     </p>
                     <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                        Supportive strategies in progress
+                        Home support ideas ready to practise
                     </p>
                 </div>
 
-                {{-- Implemented --}}
+                {{-- Part of Our Routine --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                        <span class="eyebrow uppercase">Implemented</span>
+                        <span class="eyebrow uppercase">Part of Our Routine</span>
                         <div class="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                     </div>
-                    <p class="mt-3 text-3xl font-extrabold tracking-tight">
+                    <p class="mt-3 text-3xl font-extrabold tracking-tight text-emerald-700">
                         {{ str_pad($implementedCount, 2, '0', STR_PAD_LEFT) }}
                     </p>
                     <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                        Strategies integrated into care routine
+                        Activities you have tried and built into daily care
                     </p>
                 </div>
 
-                {{-- Observation Basis --}}
+                {{-- Recorded Home Observations --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                        <span class="eyebrow uppercase">Observation Basis</span>
+                        <span class="eyebrow uppercase">Observations Logged</span>
                         <div class="w-7 h-7 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-[var(--ink)]">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                         </div>
                     </div>
                     <p class="mt-3 text-3xl font-extrabold tracking-tight text-[var(--ink)]">
-                        {{ $childTotalRecords }} {{ Str::plural('Session', $childTotalRecords) }}
+                        {{ $childTotalRecords }} {{ Str::plural('Note', $childTotalRecords) }}
                     </p>
                     <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                        Behavioral data points evaluated
+                        Everyday observation notes guiding {{ $child->first_name }}'s support plan
                     </p>
                 </div>
             </div>
@@ -322,7 +351,7 @@
                             id="rec-filter-all"
                             class="px-3.5 py-2 rounded-lg bg-[var(--ink)] text-white transition cursor-pointer"
                         >
-                            All Recommendations ({{ $recommendations->count() }})
+                            All Support Ideas ({{ $recommendations->count() }})
                         </button>
                         <button
                             type="button"
@@ -330,7 +359,7 @@
                             id="rec-filter-active"
                             class="px-3.5 py-2 rounded-lg bg-white border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--canvas)] transition cursor-pointer"
                         >
-                            Active ({{ $activeCount }})
+                            Activities to Try ({{ $activeCount }})
                         </button>
                         <button
                             type="button"
@@ -338,7 +367,7 @@
                             id="rec-filter-implemented"
                             class="px-3.5 py-2 rounded-lg bg-white border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--canvas)] transition cursor-pointer"
                         >
-                            Implemented ({{ $implementedCount }})
+                            Part of Our Routine ({{ $implementedCount }})
                         </button>
                     </div>
 
@@ -347,7 +376,7 @@
                             type="text"
                             id="rec-search-input"
                             onkeyup="searchRecs()"
-                            placeholder="Search suggestions..."
+                            placeholder="Filter by area or activity..."
                             class="w-full text-xs rounded-lg border border-[var(--line)] pl-8 pr-3 py-2 bg-[var(--canvas)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--ink)]"
                         >
                         <svg class="w-3.5 h-3.5 text-[var(--ink-soft)] absolute left-2.5 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -356,327 +385,432 @@
             </div>
 
 
-            {{-- ===================== RECOMMENDATIONS CARDS GRID ===================== --}}
-            @if($recommendations->isNotEmpty())
-                <div id="recs-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-                    @foreach($recommendations as $rec)
+            {{-- ===================== RECOMMENDATIONS CARDS ===================== --}}
+            @if ($recommendations->isNotEmpty())
+                <div id="recs-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    @foreach ($recommendations as $rec)
                         @php
                             $status = strtolower($rec->status ?? 'active');
-                            $cat = strtolower($rec->category ?? 'routine');
+                            $isImplemented = $status === 'implemented';
+                            $guide = $rec->caregiverActivityGuide($child->first_name);
+                            $searchBlob = strtolower($guide['area'] . ' ' . $rec->recommendation_text . ' ' . $guide['why_it_matters'] . ' ' . implode(' ', $guide['what_you_can_do']));
                         @endphp
-                        <div
-                            class="rec-card bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm"
+                        <article
+                            class="rec-card bg-white border border-[var(--line)] rounded-2xl p-6 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm"
                             data-status="{{ $status }}"
-                            data-cat="{{ $cat }}"
-                            data-text="{{ strtolower($rec->recommendation_text) }}"
+                            data-cat="{{ strtolower($guide['area']) }}"
+                            data-text="{{ $searchBlob }}"
                         >
-                            <div>
-                                <div class="flex items-center justify-between gap-2 mb-3">
-                                    <div class="flex items-center gap-1.5 flex-wrap">
-                                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]">
-                                            {{ ucfirst($rec->status ?? 'Active') }}
-                                        </span>
-                                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
-                                            {{ $rec->category }}
-                                        </span>
-                                    </div>
-                                    <span class="text-xs text-[var(--ink-soft)] font-mono">
-                                        #REC-{{ $rec->id }}
+                            <div class="space-y-4">
+                                {{-- Top Badge Row: Area & Practice Status --}}
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
+                                        Area: {{ $guide['area'] }}
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full {{ $isImplemented ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-[var(--canvas)] border border-[var(--line)] text-[var(--ink)]' }}">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $isImplemented ? 'bg-emerald-500' : 'bg-[var(--accent)]' }}"></span>
+                                        {{ $isImplemented ? 'Part of Our Routine' : 'Activity to Try' }}
                                     </span>
                                 </div>
 
-                                <h3 class="text-base font-bold leading-snug">
-                                    {{ $rec->recommendation_text }}
-                                </h3>
+                                {{-- Main Activity Summary --}}
+                                <div>
+                                    <h3 class="text-lg font-extrabold leading-snug text-[var(--ink)]">
+                                        {{ $rec->recommendation_text }}
+                                    </h3>
+                                </div>
 
-                                {{-- Clinical Evidence Box --}}
-                                <div class="mt-4 p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-xs">
-                                    <p class="font-bold text-[var(--ink)] mb-1 flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
-                                        Clinical / Observational Evidence
+                                {{-- 1. Why this matters --}}
+                                <div class="p-3.5 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-[var(--ink)] mb-1">
+                                        Why this matters
                                     </p>
-                                    <p class="text-[11px] text-[var(--ink-soft)] leading-relaxed italic">
-                                        "Validated based on {{ $child->first_name }}'s recorded session data ({{ $childTotalRecords }} sessions logged; avg success {{ number_format($childAvgSuccess ?? 0, 0) }}%)."
+                                    <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                        {{ $guide['why_it_matters'] }}
+                                    </p>
+                                </div>
+
+                                {{-- 2. What you can do at home --}}
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-[var(--ink)] mb-2">
+                                        What you can do at home
+                                    </p>
+                                    <ul class="space-y-1.5 text-xs text-[var(--ink-soft)] leading-relaxed list-disc list-inside">
+                                        @foreach ($guide['what_you_can_do'] as $bullet)
+                                            <li>{{ $bullet }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+
+                                {{-- 3. How to practise it & 4. What to look out for --}}
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="p-3.5 rounded-xl border border-[var(--line)] bg-white">
+                                        <p class="text-xs font-bold text-[var(--ink)] mb-1">
+                                            How to practise it
+                                        </p>
+                                        <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                            {{ $guide['how_to_practise'] }}
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl border border-[var(--line)] bg-white">
+                                        <p class="text-xs font-bold text-[var(--ink)] mb-1">
+                                            What to look out for
+                                        </p>
+                                        <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                            {{ $guide['what_to_look_out_for'] }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {{-- 5. Helpful reminder & When to seek guidance --}}
+                                <div class="p-3.5 rounded-xl bg-[var(--accent-tint)]/60 border border-[var(--accent-soft)] text-xs space-y-1.5">
+                                    <p class="text-[var(--ink)] leading-relaxed">
+                                        <strong class="font-bold">Helpful reminder:</strong> {{ $guide['helpful_reminder'] }}
+                                    </p>
+                                    <p class="text-[var(--ink-soft)] leading-relaxed">
+                                        <strong class="font-semibold text-[var(--ink)]">When to talk with your clinician:</strong> {{ $guide['when_to_seek_guidance'] }}
                                     </p>
                                 </div>
                             </div>
 
-                            <div class="pt-4 border-t border-[var(--line)] mt-5 flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                                <span>
-                                    {{ $rec->date_generated?->format('M d, Y') ?? 'Generated' }}
-                                </span>
-                                <span class="font-semibold text-[var(--ink)]">
-                                    Decision Support
-                                </span>
+                            {{-- Progress Tracking Footer --}}
+                            <div class="pt-4 border-t border-[var(--line)] mt-5 flex flex-wrap items-center justify-between gap-3">
+                                <form method="POST" action="{{ route('children.recommendations.update-status', [$child, $rec]) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ $isImplemented ? 'active' : 'implemented' }}">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg transition {{ $isImplemented ? 'border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink-soft)] hover:text-[var(--ink)]' : 'bg-[var(--ink)] text-white hover:opacity-90' }}"
+                                    >
+                                        @if ($isImplemented)
+                                            <span>Move Back to "To Try" List</span>
+                                        @else
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                            <span>Mark as Tried at Home</span>
+                                        @endif
+                                    </button>
+                                </form>
+
+                                <a
+                                    href="{{ route('behavioural-records.create') }}?child_id={{ $child->id }}"
+                                    class="inline-flex items-center gap-1 text-xs font-semibold text-[var(--accent)] hover:underline"
+                                >
+                                    <span>Record how this went →</span>
+                                </a>
                             </div>
-                        </div>
+                        </article>
                     @endforeach
                 </div>
-            @elseif($childTotalRecords > 0)
-                {{-- Observation-Derived Transparent Recommendations (when no explicit DB recommendations exist) --}}
+            @elseif ($childTotalRecords > 0)
+                {{-- Observation-Guided Home Support Cards (when observations exist before a specialist prediction is run) --}}
+                @php
+                    $observationGuides = [
+                        (new \App\Models\Recommendation([
+                            'category' => 'Communication',
+                            'recommendation_text' => "Offer two simple visual or gesture choices during {$child->first_name}'s daily snack and story routines.",
+                            'status' => 'active',
+                        ])),
+                        (new \App\Models\Recommendation([
+                            'category' => 'Social Interaction',
+                            'recommendation_text' => "Spend 10 relaxed minutes in side-by-side play following {$child->first_name}'s favourite toy or interest.",
+                            'status' => 'active',
+                        ])),
+                        (new \App\Models\Recommendation([
+                            'category' => 'Calm Routines & Transitions',
+                            'recommendation_text' => "Give a gentle 5-minute and 2-minute heads-up before switching from playtime to daily routines.",
+                            'status' => 'active',
+                        ])),
+                        (new \App\Models\Recommendation([
+                            'category' => 'Everyday Independence',
+                            'recommendation_text' => "Break one daily self-care routine into 3 simple steps and celebrate when {$child->first_name} finishes the last step.",
+                            'status' => 'active',
+                        ])),
+                    ];
+                @endphp
+
                 <div class="space-y-4 mb-6">
                     <div class="p-4 rounded-xl bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-start gap-3 text-xs">
                         <svg class="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <div>
-                            <p class="font-bold">Observation-Derived Decision Support</p>
-                            <p class="mt-0.5 text-[var(--ink-soft)]">
-                                The following supportive strategies are derived transparently from {{ $child->first_name }}'s {{ $childTotalRecords }} recorded behavioral session observations. They are intended for caregiver guidance and do not replace formal clinical IEP directives.
+                            <p class="font-bold text-[var(--ink)]">Home Activities Based on {{ $child->first_name }}'s Recorded Observations</p>
+                            <p class="mt-0.5 text-[var(--ink-soft)] leading-relaxed">
+                                These practical home activities are tailored to the {{ $childTotalRecords }} {{ Str::plural('observation', $childTotalRecords) }} you have logged for {{ $child->first_name }}. They offer gentle ideas for everyday routines and do not replace advice from your child's clinician.
                             </p>
                         </div>
                     </div>
 
-                    <div id="recs-container" class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        {{-- Strategy 1: Communication --}}
-                        <div class="rec-card bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm" data-status="active" data-cat="communication" data-text="communication visual prompts scaffolding">
-                            <div>
-                                <div class="flex items-center justify-between gap-2 mb-3">
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-teal-300 bg-teal-50 text-teal-800">
-                                        Active
-                                    </span>
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
-                                        Communication
-                                    </span>
-                                </div>
-                                <h3 class="text-base font-bold leading-snug">
-                                    Incorporate Visual Schedule &amp; AAC Scaffolding
-                                </h3>
-                                <p class="text-xs text-[var(--ink-soft)] mt-2 leading-relaxed">
-                                    Pair verbal instructions with pictorial visual cards to support language comprehension and functional requests during daily routines.
-                                </p>
-                                <div class="mt-4 p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-xs">
-                                    <p class="font-bold text-[var(--ink)] text-[11px] mb-0.5">Observational Evidence</p>
-                                    <p class="text-[11px] text-[var(--ink-soft)] italic">
-                                        "Communication score averages {{ number_format($avgCommunication, 1) }}/10 across {{ $childTotalRecords }} sessions."
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="pt-4 border-t border-[var(--line)] mt-5 flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                                <span>Recent Pattern</span>
-                                <span class="font-semibold text-[var(--ink)]">Communication Routine</span>
-                            </div>
-                        </div>
+                    <div id="recs-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        @foreach ($observationGuides as $obsRec)
+                            @php
+                                $guide = $obsRec->caregiverActivityGuide($child->first_name);
+                                $searchBlob = strtolower($guide['area'] . ' ' . $obsRec->recommendation_text . ' ' . $guide['why_it_matters']);
+                            @endphp
+                            <article
+                                class="rec-card bg-white border border-[var(--line)] rounded-2xl p-6 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm"
+                                data-status="active"
+                                data-cat="{{ strtolower($guide['area']) }}"
+                                data-text="{{ $searchBlob }}"
+                            >
+                                <div class="space-y-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
+                                            Area: {{ $guide['area'] }}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[var(--canvas)] border border-[var(--line)] text-[var(--ink)]">
+                                            Everyday Home Activity
+                                        </span>
+                                    </div>
 
-                        {{-- Strategy 2: Sensory & Engagement --}}
-                        <div class="rec-card bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm" data-status="active" data-cat="sensory" data-text="sensory engagement interval structured">
-                            <div>
-                                <div class="flex items-center justify-between gap-2 mb-3">
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-teal-300 bg-teal-50 text-teal-800">
-                                        Active
-                                    </span>
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
-                                        Sensory &amp; Focus
-                                    </span>
-                                </div>
-                                <h3 class="text-base font-bold leading-snug">
-                                    Implement 15-Minute Structured Focus Intervals
-                                </h3>
-                                <p class="text-xs text-[var(--ink-soft)] mt-2 leading-relaxed">
-                                    Break complex tasks into focused 15-minute intervals paired with tactile sensory decompression breaks to maintain attention.
-                                </p>
-                                <div class="mt-4 p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-xs">
-                                    <p class="font-bold text-[var(--ink)] text-[11px] mb-0.5">Observational Evidence</p>
-                                    <p class="text-[11px] text-[var(--ink-soft)] italic">
-                                        "Engagement level averages {{ number_format($avgEngagement, 1) }}/10; focus peaks in early activity segments."
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="pt-4 border-t border-[var(--line)] mt-5 flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                                <span>Recent Pattern</span>
-                                <span class="font-semibold text-[var(--ink)]">Sensory Integration</span>
-                            </div>
-                        </div>
+                                    <h3 class="text-lg font-extrabold leading-snug text-[var(--ink)]">
+                                        {{ $obsRec->recommendation_text }}
+                                    </h3>
 
-                        {{-- Strategy 3: Routine & Transition --}}
-                        <div class="rec-card bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between hover:border-[var(--ink)] transition shadow-sm" data-status="active" data-cat="routine" data-text="routine transitions regulation repetitive">
-                            <div>
-                                <div class="flex items-center justify-between gap-2 mb-3">
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-teal-300 bg-teal-50 text-teal-800">
-                                        Active
-                                    </span>
-                                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
-                                        Routine
-                                    </span>
+                                    <div class="p-3.5 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                        <p class="text-xs font-bold uppercase tracking-wide text-[var(--ink)] mb-1">
+                                            Why this matters
+                                        </p>
+                                        <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                            {{ $guide['why_it_matters'] }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-wide text-[var(--ink)] mb-2">
+                                            What you can do at home
+                                        </p>
+                                        <ul class="space-y-1.5 text-xs text-[var(--ink-soft)] leading-relaxed list-disc list-inside">
+                                            @foreach ($guide['what_you_can_do'] as $bullet)
+                                                <li>{{ $bullet }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div class="p-3.5 rounded-xl border border-[var(--line)] bg-white">
+                                            <p class="text-xs font-bold text-[var(--ink)] mb-1">
+                                                How to practise it
+                                            </p>
+                                            <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                                {{ $guide['how_to_practise'] }}
+                                            </p>
+                                        </div>
+
+                                        <div class="p-3.5 rounded-xl border border-[var(--line)] bg-white">
+                                            <p class="text-xs font-bold text-[var(--ink)] mb-1">
+                                                What to look out for
+                                            </p>
+                                            <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
+                                                {{ $guide['what_to_look_out_for'] }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-[var(--accent-tint)]/60 border border-[var(--accent-soft)] text-xs space-y-1.5">
+                                        <p class="text-[var(--ink)] leading-relaxed">
+                                            <strong class="font-bold">Helpful reminder:</strong> {{ $guide['helpful_reminder'] }}
+                                        </p>
+                                        <p class="text-[var(--ink-soft)] leading-relaxed">
+                                            <strong class="font-semibold text-[var(--ink)]">When to talk with your clinician:</strong> {{ $guide['when_to_seek_guidance'] }}
+                                        </p>
+                                    </div>
                                 </div>
-                                <h3 class="text-base font-bold leading-snug">
-                                    Pre-Transition Timers for Routine Changes
-                                </h3>
-                                <p class="text-xs text-[var(--ink-soft)] mt-2 leading-relaxed">
-                                    Provide 5-minute and 2-minute visual countdown prompts before shifting from preferred to structured tasks to minimize dysregulation.
-                                </p>
-                                <div class="mt-4 p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-xs">
-                                    <p class="font-bold text-[var(--ink)] text-[11px] mb-0.5">Observational Evidence</p>
-                                    <p class="text-[11px] text-[var(--ink-soft)] italic">
-                                        "Repetitive behavior index averages {{ number_format($avgRepetitive, 1) }}/10 with {{ number_format($childAvgSuccess ?? 0, 0) }}% session success."
-                                    </p>
+
+                                <div class="pt-4 border-t border-[var(--line)] mt-5 flex items-center justify-between text-xs">
+                                    <a href="{{ route('behavioural-records.create') }}?child_id={{ $child->id }}" class="font-semibold text-[var(--ink)] hover:underline">
+                                        + Log how this activity went at home
+                                    </a>
+                                    <a href="{{ route('children.show', ['child' => $child, 'tab' => 'behavioral-logs']) }}" class="font-semibold text-[var(--accent)] hover:underline">
+                                        View Observation Notes →
+                                    </a>
                                 </div>
-                            </div>
-                            <div class="pt-4 border-t border-[var(--line)] mt-5 flex items-center justify-between text-xs text-[var(--ink-soft)]">
-                                <span>Recent Pattern</span>
-                                <span class="font-semibold text-[var(--ink)]">Behavior Regulation</span>
-                            </div>
-                        </div>
+                            </article>
+                        @endforeach
                     </div>
                 </div>
             @else
                 {{-- Clean Empty State Card --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-10 sm:p-14 text-center mb-6">
                     <div class="w-14 h-14 rounded-2xl bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center mx-auto text-[var(--accent)] mb-4 shadow-sm">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
                     </div>
                     <h3 class="text-lg font-bold">
-                        No Recommendations Available Yet
+                        No Home Support Ideas Yet for {{ $child->first_name }}
                     </h3>
                     <p class="text-sm text-[var(--ink-soft)] mt-2 max-w-md mx-auto leading-relaxed">
-                        Personalized support recommendations and evidence-informed interventions will generate as you record behavioral observations for {{ $child->first_name }}.
+                        Start by logging a short observation about {{ $child->first_name }}'s everyday communication, play, or routines. Practical home activity ideas will appear here automatically.
                     </p>
                     <div class="mt-6 flex items-center justify-center gap-3">
                         <a
                             href="{{ route('behavioural-records.create') }}?child_id={{ $child->id }}"
-                            class="inline-flex items-center gap-2 rounded-lg bg-[var(--ink)] px-4 py-2 text-xs font-bold text-white hover:opacity-90 transition"
+                            class="inline-flex items-center gap-2 rounded-lg bg-[var(--ink)] px-4 py-2.5 text-xs font-bold text-white hover:opacity-90 transition"
                         >
-                            Record First Observation
+                            Record First Home Observation
                         </a>
                     </div>
                 </div>
             @endif
 
 
-            {{-- ===================== SUGGESTED CAREGIVER RESOURCES ===================== --}}
+            {{-- ===================== EVERYDAY CAREGIVER TIPS BY AREA ===================== --}}
             <div class="bg-white border border-[var(--line)] rounded-2xl p-6 sm:p-8 mb-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
                     <div>
                         <h3 class="text-lg font-bold tracking-tight">
-                            Suggested Resources
+                            Quick Home Guides by Developmental Area
                         </h3>
                         <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                            Expert materials and clinical strategies to help implement supportive recommendations at home.
+                            Simple ways to make daily routines feel calmer, clearer, and more connected for {{ $child->first_name }}.
                         </p>
                     </div>
                     <span class="text-xs font-semibold text-[var(--ink)]">
-                        Resource Library
+                        Caregiver Reference
                     </span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {{-- Resource 1 --}}
-                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white hover:border-[var(--ink)] transition flex flex-col justify-between">
+                    {{-- Guide 1 --}}
+                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white flex flex-col justify-between">
                         <div class="flex items-start gap-3">
                             <div class="w-9 h-9 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-[var(--ink)] shrink-0">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold leading-tight">Visual Schedule Basics</h4>
-                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Caregiver Guide</span>
+                                <h4 class="text-xs font-bold leading-tight">Picture &amp; Choice Cards</h4>
+                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Communication</span>
                             </div>
                         </div>
-                        <p class="text-[11px] text-[var(--ink-soft)] mt-3">Step-by-step guidance on structuring daily routines with visual cue cards.</p>
+                        <p class="text-[11px] text-[var(--ink-soft)] mt-3 leading-relaxed">
+                            Hold up two real objects or pictures during meals or play so your child can point, look, or speak to choose.
+                        </p>
                     </div>
 
-                    {{-- Resource 2 --}}
-                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white hover:border-[var(--ink)] transition flex flex-col justify-between">
+                    {{-- Guide 2 --}}
+                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white flex flex-col justify-between">
                         <div class="flex items-start gap-3">
                             <div class="w-9 h-9 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)] shrink-0">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold leading-tight">Sensory Toolkits 101</h4>
-                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Intervention Strategy</span>
+                                <h4 class="text-xs font-bold leading-tight">Calm Transition Warnings</h4>
+                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Routines &amp; Comfort</span>
                             </div>
                         </div>
-                        <p class="text-[11px] text-[var(--ink-soft)] mt-3">Practical tools to manage sensory overload and support emotional regulation.</p>
+                        <p class="text-[11px] text-[var(--ink-soft)] mt-3 leading-relaxed">
+                            Use a "First–Then" phrase ("First tidy blocks, then snack") and a 2-minute countdown before changing activities.
+                        </p>
                     </div>
 
-                    {{-- Resource 3 --}}
-                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white hover:border-[var(--ink)] transition flex flex-col justify-between">
+                    {{-- Guide 3 --}}
+                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white flex flex-col justify-between">
                         <div class="flex items-start gap-3">
                             <div class="w-9 h-9 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-teal-700 shrink-0">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold leading-tight">Parallel Play Guide</h4>
-                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Social Scaffolding</span>
+                                <h4 class="text-xs font-bold leading-tight">Side-by-Side Play</h4>
+                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Social Interaction</span>
                             </div>
                         </div>
-                        <p class="text-[11px] text-[var(--ink-soft)] mt-3">Techniques for fostering shared play and non-verbal social reciprocity.</p>
+                        <p class="text-[11px] text-[var(--ink-soft)] mt-3 leading-relaxed">
+                            Join your child's favourite game warmly without pressure, taking gentle turns rolling a ball or stacking blocks.
+                        </p>
                     </div>
 
-                    {{-- Resource 4 --}}
-                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white hover:border-[var(--ink)] transition flex flex-col justify-between">
+                    {{-- Guide 4 --}}
+                    <div class="border border-[var(--line)] rounded-xl p-4 bg-white flex flex-col justify-between">
                         <div class="flex items-start gap-3">
-                            <div class="w-9 h-9 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-indigo-700 shrink-0">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <div class="w-9 h-9 rounded-lg bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-emerald-700 shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold leading-tight">Clinical Best Practices</h4>
-                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Evidence-Based</span>
+                                <h4 class="text-xs font-bold leading-tight">Small Step Independence</h4>
+                                <span class="text-[10px] text-[var(--ink-soft)] uppercase font-semibold">Daily Living</span>
                             </div>
                         </div>
-                        <p class="text-[11px] text-[var(--ink-soft)] mt-3">Peer-reviewed summaries on early childhood cognitive support for ASD.</p>
+                        <p class="text-[11px] text-[var(--ink-soft)] mt-3 leading-relaxed">
+                            Do the first steps of dressing or handwashing together, and let your child proudly complete the final step.
+                        </p>
                     </div>
                 </div>
             </div>
 
 
-            {{-- ===================== DATA PROTECTION & COMPLIANCE BANNER ===================== --}}
+            {{-- ===================== SUPPORTIVE DISCLAIMER BANNER ===================== --}}
             <div class="border border-[var(--line)] rounded-2xl p-5 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-start gap-3">
                     <div class="w-8 h-8 rounded-lg bg-[var(--canvas)] border border-[var(--line)] text-[var(--ink)] flex items-center justify-center shrink-0 mt-0.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     </div>
                     <div>
-                        <h4 class="text-xs font-bold">Data Protection Compliant Decision Support</h4>
-                        <p class="text-[11px] text-[var(--ink-soft)] mt-0.5">
-                            All recommendations are generated within a secure environment. No identifiable patient data is shared with external commercial AI models. For exploratory developmental support only; not a substitute for clinical diagnosis.
+                        <h4 class="text-xs font-bold">Supportive Home Guidance — Not a Medical Diagnosis</h4>
+                        <p class="text-[11px] text-[var(--ink-soft)] mt-0.5 max-w-2xl leading-relaxed">
+                            These recommendations are practical everyday suggestions to support {{ $child->first_name }} at home. They are not a medical diagnosis or a replacement for a qualified clinician, speech therapist, or occupational therapist. Always discuss developmental questions or concerns with your child's specialist team.
                         </p>
                     </div>
                 </div>
-                <div class="flex items-center gap-3 shrink-0 text-xs font-semibold text-[var(--ink)]">
-                    <span>Clinical Privacy Verified</span>
-                </div>
+
+                <a
+                    href="{{ route('children.predictions-analytics', $child) }}"
+                    class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[#efe7dc] transition shrink-0"
+                >
+                    View Developmental Progress →
+                </a>
             </div>
 
         </main>
+
     </div>
 
 </div>
 
 <script>
+    let currentStatusFilter = 'all';
+
     function filterRecs(status) {
-        const buttons = ['all', 'active', 'implemented'];
-        buttons.forEach(function (b) {
-            const btn = document.getElementById('rec-filter-' + b);
-            if (btn) {
-                if (b === status) {
-                    btn.className = 'px-3.5 py-2 rounded-lg bg-[var(--ink)] text-white transition cursor-pointer';
-                } else {
-                    btn.className = 'px-3.5 py-2 rounded-lg bg-white border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--canvas)] transition cursor-pointer';
-                }
+        currentStatusFilter = status;
+        const buttons = {
+            all: document.getElementById('rec-filter-all'),
+            active: document.getElementById('rec-filter-active'),
+            implemented: document.getElementById('rec-filter-implemented')
+        };
+
+        Object.keys(buttons).forEach(function (key) {
+            if (!buttons[key]) return;
+            if (key === status) {
+                buttons[key].className = 'px-3.5 py-2 rounded-lg bg-[var(--ink)] text-white transition cursor-pointer';
+            } else {
+                buttons[key].className = 'px-3.5 py-2 rounded-lg bg-white border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--canvas)] transition cursor-pointer';
             }
         });
 
-        const cards = document.querySelectorAll('.rec-card');
-        cards.forEach(function (card) {
-            const cardStatus = card.getAttribute('data-status');
-            if (status === 'all') {
-                card.classList.remove('hidden');
-            } else if (status === 'active' && (cardStatus === 'active' || cardStatus === 'urgent' || cardStatus === 'new')) {
-                card.classList.remove('hidden');
-            } else if (status === 'implemented' && cardStatus === 'implemented') {
-                card.classList.remove('hidden');
-            } else {
-                card.classList.add('hidden');
-            }
-        });
+        applyRecFilters();
     }
 
     function searchRecs() {
-        const input = document.getElementById('rec-search-input');
-        const filter = input ? input.value.toLowerCase() : '';
+        applyRecFilters();
+    }
+
+    function applyRecFilters() {
+        const q = (document.getElementById('rec-search-input')?.value || '').toLowerCase().trim();
         const cards = document.querySelectorAll('.rec-card');
 
         cards.forEach(function (card) {
-            const text = (card.getAttribute('data-text') || '') + ' ' + (card.getAttribute('data-cat') || '');
-            if (text.toLowerCase().indexOf(filter) > -1) {
+            const cardStatus = (card.getAttribute('data-status') || 'active').toLowerCase();
+            const cardText = (card.getAttribute('data-text') || '') + ' ' + (card.textContent || '').toLowerCase();
+
+            let statusMatch = true;
+            if (currentStatusFilter === 'active') {
+                statusMatch = (cardStatus === 'active' || cardStatus === 'urgent' || cardStatus === 'new');
+            } else if (currentStatusFilter === 'implemented') {
+                statusMatch = (cardStatus === 'implemented');
+            }
+
+            const searchMatch = !q || cardText.indexOf(q) > -1;
+
+            if (statusMatch && searchMatch) {
                 card.classList.remove('hidden');
             } else {
                 card.classList.add('hidden');

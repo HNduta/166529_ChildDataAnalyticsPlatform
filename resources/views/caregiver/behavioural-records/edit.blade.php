@@ -154,10 +154,23 @@
                     Support
                 </p>
 
-                <a href="{{ route('caregiver.recommendations') }}" class="navlink">
-                    Recommendations
-                </a>
+                <div class="space-y-1">
+                    <a href="{{ route('caregiver.recommendations') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+                        Recommendations
+                    </a>
+                </div>
 
+            </div>
+
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
             </div>
 
         </nav>
@@ -176,10 +189,16 @@
 
             <div class="ml-auto flex items-center gap-3">
 
-                <div class="flex items-center gap-2.5">
-
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $userAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
 
                     <div class="hidden sm:block leading-tight">
@@ -194,7 +213,7 @@
 
                     </div>
 
-                </div>
+                </a>
 
 
                 <form

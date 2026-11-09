@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Child;
+use App\Models\Recommendation;
 use App\Services\ChildPredictionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Throwable;
 
@@ -69,7 +71,10 @@ class ChildController extends Controller
             'born_with_jaundice' => ['nullable', 'boolean'],
             'family_member_with_asd' => ['nullable', 'boolean'],
             'diagnosis_confirmed' => ['nullable', 'boolean'],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
+
+        unset($validated['profile_picture']);
 
         $validated['born_with_jaundice'] =
             $request->boolean('born_with_jaundice');
@@ -79,6 +84,10 @@ class ChildController extends Controller
 
         $validated['diagnosis_confirmed'] =
             $request->boolean('diagnosis_confirmed');
+
+        if ($request->hasFile('profile_picture')) {
+            $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures/children', 'public');
+        }
 
         // Assign ownership using the authenticated caregiver.
         $request->user()->children()->create($validated);
@@ -277,28 +286,33 @@ class ChildController extends Controller
             ->take(2)
             ->get();
         $avgSuccessFirst2 = $firstTwoRecords->count() >= 2
-            ? $firstTwoRecords->avg('success_rate')
-            : ($firstTwoRecords->count() == 1 ? $firstTwoRecords->first()->success_rate : null);
+            ? round((float) $firstTwoRecords->avg('success_rate'), 1)
+            : null;
+
+        $latestObservation = $child->behaviouralRecords()
+            ->latest('observation_date')
+            ->latest('id')
+            ->first();
 
         $latestRecordWithAssessment = $child->behaviouralRecords()
             ->whereNotNull('ml_assessment_inputs')
             ->latest('observation_date')
+            ->latest('id')
             ->first();
-        $assessmentInputs = $latestRecordWithAssessment?->ml_assessment_inputs ?? [];
+        $assessmentInputs = is_array($latestRecordWithAssessment?->ml_assessment_inputs)
+            ? $latestRecordWithAssessment->ml_assessment_inputs
+            : [];
 
-        $childAgeYears = $child->age_in_months
-            ? round($child->age_in_months / 12, 1)
-            : 4.0;
-        $childGenderVal = strtolower($child->sex ?? 'female');
-
-        if (!isset($assessmentInputs['avg_success_first_2']) && $avgSuccessFirst2 !== null) {
-            $assessmentInputs['avg_success_first_2'] = round((float) $avgSuccessFirst2, 1);
-        }
-        if (!isset($assessmentInputs['age_years'])) {
-            $assessmentInputs['age_years'] = $childAgeYears;
-        }
-        if (!isset($assessmentInputs['gender'])) {
-            $assessmentInputs['gender'] = $childGenderVal;
+        if ($latestRecordWithAssessment !== null) {
+            if ((!isset($assessmentInputs['avg_success_first_2']) || $assessmentInputs['avg_success_first_2'] === '') && $avgSuccessFirst2 !== null) {
+                $assessmentInputs['avg_success_first_2'] = $avgSuccessFirst2;
+            }
+            if ((!isset($assessmentInputs['age_years']) || $assessmentInputs['age_years'] === '') && $child->age_in_months !== null) {
+                $assessmentInputs['age_years'] = round($child->age_in_months / 12, 1);
+            }
+            if ((!isset($assessmentInputs['gender']) || $assessmentInputs['gender'] === '') && !empty($child->sex)) {
+                $assessmentInputs['gender'] = strtolower($child->sex);
+            }
         }
 
         $requiredFeatures = [
@@ -325,42 +339,81 @@ class ChildController extends Controller
             }
         }
 
-        $mlServiceResult = session('ml_service_result');
-        $mlServiceError = session('ml_service_error');
+        $mlServiceResult = null;
+        $mlServiceError = null;
+        $mlServiceUnavailable = false;
 
-        if (!$mlServiceResult && empty($missingFeatures)) {
-            try {
-                $mlServiceResult = app(ChildPredictionService::class)->predict($assessmentInputs);
+        $latestExistingPrediction = $child->predictions()
+            ->latest('date_generated')
+            ->latest('id')
+            ->first();
 
-                $targetObservation = $latestRecordWithAssessment
-                    ?? $child->behaviouralRecords()->latest('observation_date')->first();
+        $latestObservationUpdatedAt = $child->behaviouralRecords()->max('updated_at');
 
-                if ($targetObservation && !$child->predictions()->exists()) {
-                    $predictedKey = (string) $mlServiceResult['predicted_class'];
-                    $confScore = isset($mlServiceResult['class_scores'][$predictedKey])
-                        ? round((float) $mlServiceResult['class_scores'][$predictedKey], 4)
-                        : null;
-
-                    $createdPred = $targetObservation->predictions()->create([
-                        'child_id' => $child->id,
-                        'model_used' => 'child_intervention_pipeline',
-                        'predicted_outcome' => $predictedKey,
-                        'confidence_score' => $confScore,
-                        'date_generated' => now(),
-                        'validated_by_clinician' => false,
-                    ]);
-                    $createdPred->syncSupportRecommendations($assessmentInputs);
-                }
-            } catch (Throwable $e) {
-                $mlServiceError = $e->getMessage();
+        $needsNewPrediction = false;
+        if ($latestRecordWithAssessment !== null && empty($missingFeatures)) {
+            if ($latestExistingPrediction === null) {
+                $needsNewPrediction = true;
+            } elseif ((int) $latestExistingPrediction->observation_id !== (int) $latestRecordWithAssessment->id) {
+                $needsNewPrediction = true;
+            } elseif (
+                $latestRecordWithAssessment->updated_at
+                && $latestExistingPrediction->date_generated
+                && $latestRecordWithAssessment->updated_at->gt($latestExistingPrediction->date_generated)
+            ) {
+                $needsNewPrediction = true;
+            } elseif (
+                $latestObservationUpdatedAt
+                && $latestExistingPrediction->date_generated
+                && \Carbon\Carbon::parse($latestObservationUpdatedAt)->gt($latestExistingPrediction->date_generated)
+            ) {
+                $needsNewPrediction = true;
             }
         }
 
-        $latestPrediction = $child->predictions()->latest('date_generated')->first();
-        $predictions = $child->predictions()->with('observation')->latest('date_generated')->get();
+        if ($needsNewPrediction) {
+            try {
+                $mlServiceResult = app(ChildPredictionService::class)->predict($assessmentInputs);
+
+                $predictedKey = (string) $mlServiceResult['predicted_class'];
+                $confScore = isset($mlServiceResult['class_scores'][$predictedKey])
+                    ? round((float) $mlServiceResult['class_scores'][$predictedKey], 4)
+                    : null;
+
+                $createdPred = $latestRecordWithAssessment->predictions()->create([
+                    'child_id' => $child->id,
+                    'model_used' => 'child_intervention_pipeline',
+                    'predicted_outcome' => $predictedKey,
+                    'confidence_score' => $confScore,
+                    'date_generated' => now(),
+                    'validated_by_clinician' => false,
+                ]);
+                $createdPred->syncSupportRecommendations($assessmentInputs);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $mlServiceError = 'The recorded assessment inputs contain invalid values and could not be processed. Please ask your clinician to review the assessment record.';
+            } catch (Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Automatic prediction request failed.', [
+                    'child_id' => $child->id,
+                    'observation_id' => $latestRecordWithAssessment?->id,
+                    'exception' => $e::class,
+                ]);
+                $mlServiceUnavailable = true;
+                $mlServiceError = 'The developmental progress analysis service is temporarily unavailable. No new indicator was generated; please try again shortly.';
+            }
+        } elseif ($latestExistingPrediction && !$child->recommendations()->exists()) {
+            $latestExistingPrediction->syncSupportRecommendations($assessmentInputs);
+        }
+
+        $latestPrediction = $child->predictions()->latest('date_generated')->latest('id')->first();
+        $predictions = $child->predictions()->with('observation')->latest('date_generated')->latest('id')->get();
         $clinicalValidations = $child->predictions()
             ->where('validated_by_clinician', true)
             ->with('observation')
+            ->latest('date_generated')
+            ->get();
+
+        $recommendations = $child->recommendations()
+            ->with('prediction')
             ->latest('date_generated')
             ->get();
 
@@ -374,7 +427,10 @@ class ChildController extends Controller
             'averageDuration',
             'predictions',
             'latestPrediction',
+            'latestObservation',
+            'latestRecordWithAssessment',
             'clinicalValidations',
+            'recommendations',
             'therapyGoals',
             'clinicians',
             'trajectoryRecords',
@@ -383,6 +439,7 @@ class ChildController extends Controller
             'missingFeatures',
             'mlServiceResult',
             'mlServiceError',
+            'mlServiceUnavailable',
             'avgCommunication',
             'avgSocial',
             'avgEngagement',
@@ -391,91 +448,34 @@ class ChildController extends Controller
     }
 
     /**
-     * Submit assessment inputs and generate a prediction from the Python ML service.
+     * Update a recommendation's home practice status for the caregiver's child.
      */
-    public function generatePrediction(
+    public function updateRecommendationStatus(
         Request $request,
         Child $child,
-        ChildPredictionService $predictionService
+        Recommendation $recommendation
     ): RedirectResponse {
         $child = $request->user()
             ->children()
             ->findOrFail($child->id);
 
+        abort_unless((int) $recommendation->child_id === (int) $child->id, 404);
+
         $validated = $request->validate([
-            'avg_success_first_2' => ['required', 'numeric', 'between:0,100'],
-            'age_years' => ['required', 'numeric', 'between:0,120'],
-            'ados2_social_affect' => ['required', 'numeric'],
-            'ados2_rrb' => ['required', 'numeric'],
-            'cognitive_verbal_percentile' => ['required', 'numeric', 'between:0,100'],
-            'cognitive_nonverbal_percentile' => ['required', 'numeric', 'between:0,100'],
-            'cognitive_gca_percentile' => ['required', 'numeric', 'between:0,100'],
-            'adaptive_composite_percentile' => ['required', 'numeric', 'between:0,100'],
-            'num_current_services' => ['required', 'integer', 'min:0'],
-            'domain' => ['required', 'string', 'min:1', 'max:100'],
-            'gender' => ['required', 'string', 'min:1', 'max:50'],
-            'support_level' => ['required', 'string', 'min:1', 'max:100'],
-            'primary_domain' => ['required', 'string', 'min:1', 'max:100'],
-            'ados2_comparison_score' => ['required', 'string', 'min:1', 'max:100'],
+            'status' => ['required', 'in:active,implemented'],
         ]);
 
-        $validated['avg_success_first_2'] = (float) $validated['avg_success_first_2'];
-        $validated['age_years'] = (float) $validated['age_years'];
-        $validated['ados2_social_affect'] = (float) $validated['ados2_social_affect'];
-        $validated['ados2_rrb'] = (float) $validated['ados2_rrb'];
-        $validated['cognitive_verbal_percentile'] = (float) $validated['cognitive_verbal_percentile'];
-        $validated['cognitive_nonverbal_percentile'] = (float) $validated['cognitive_nonverbal_percentile'];
-        $validated['cognitive_gca_percentile'] = (float) $validated['cognitive_gca_percentile'];
-        $validated['adaptive_composite_percentile'] = (float) $validated['adaptive_composite_percentile'];
-        $validated['num_current_services'] = (int) $validated['num_current_services'];
+        $recommendation->update([
+            'status' => $validated['status'],
+        ]);
 
-        $record = $child->behaviouralRecords()->latest('observation_date')->first();
-        if (!$record) {
-            $record = $child->behaviouralRecords()->create([
-                'caregiver_id' => $request->user()->id,
-                'observation_date' => now()->toDateString(),
-                'communication_score' => 3,
-                'social_interaction_score' => 3,
-                'engagement_level' => 3,
-                'repetitive_behaviour_score' => 2,
-                'session_duration_minutes' => 30,
-                'success_rate' => $validated['avg_success_first_2'],
-                'notes' => 'Baseline observation created for ML assessment',
-                'ml_assessment_inputs' => $validated,
-            ]);
-        } else {
-            $record->update([
-                'ml_assessment_inputs' => $validated,
-            ]);
-        }
+        $message = $validated['status'] === 'implemented'
+            ? 'Great work! Marked this support activity as part of your home routine.'
+            : 'Moved this support activity back to your active practice list.';
 
-        try {
-            $result = $predictionService->predict($validated);
-
-            $predictedKey = (string) $result['predicted_class'];
-            $confidenceScore = isset($result['class_scores'][$predictedKey])
-                ? round((float) $result['class_scores'][$predictedKey], 4)
-                : null;
-
-            $prediction = $record->predictions()->create([
-                'child_id' => $child->id,
-                'model_used' => 'child_intervention_pipeline',
-                'predicted_outcome' => $predictedKey,
-                'confidence_score' => $confidenceScore,
-                'date_generated' => now(),
-                'validated_by_clinician' => false,
-            ]);
-            $prediction->syncSupportRecommendations($validated);
-
-            return redirect()
-                ->route('children.predictions-analytics', $child)
-                ->with('success', 'ML service prediction generated and recorded successfully.')
-                ->with('ml_service_result', $result);
-        } catch (Throwable $e) {
-            return redirect()
-                ->route('children.predictions-analytics', $child)
-                ->with('ml_service_error', 'Assessment inputs saved. Could not reach ML service (' . $e->getMessage() . '). Ensure the FastAPI service is running.');
-        }
+        return redirect()
+            ->route('children.recommendations', $child)
+            ->with('success', $message);
     }
 
     /**
@@ -508,7 +508,11 @@ class ChildController extends Controller
             'born_with_jaundice' => ['nullable', 'boolean'],
             'family_member_with_asd' => ['nullable', 'boolean'],
             'diagnosis_confirmed' => ['nullable', 'boolean'],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_profile_picture' => ['nullable', 'boolean'],
         ]);
+
+        unset($validated['profile_picture'], $validated['remove_profile_picture']);
 
         $validated['born_with_jaundice'] =
             $request->boolean('born_with_jaundice');
@@ -518,6 +522,18 @@ class ChildController extends Controller
 
         $validated['diagnosis_confirmed'] =
             $request->boolean('diagnosis_confirmed');
+
+        if ($request->boolean('remove_profile_picture') && !empty($child->profile_picture)) {
+            Storage::disk('public')->delete($child->profile_picture);
+            $validated['profile_picture'] = null;
+        }
+
+        if ($request->hasFile('profile_picture')) {
+            if (!empty($child->profile_picture)) {
+                Storage::disk('public')->delete($child->profile_picture);
+            }
+            $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures/children', 'public');
+        }
 
         $child->update($validated);
 
@@ -536,6 +552,10 @@ class ChildController extends Controller
         $child = $request->user()
             ->children()
             ->findOrFail($child->id);
+
+        if (!empty($child->profile_picture)) {
+            Storage::disk('public')->delete($child->profile_picture);
+        }
 
         $child->delete();
 

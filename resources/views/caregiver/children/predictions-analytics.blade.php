@@ -62,6 +62,42 @@
     $avgSocial = $avgSocial ?? $child->behaviouralRecords()->avg('social_interaction_score');
     $avgEngagement = $avgEngagement ?? $child->behaviouralRecords()->avg('engagement_level');
     $avgRepetitive = $avgRepetitive ?? $child->behaviouralRecords()->avg('repetitive_behaviour_score');
+    $recommendations = $recommendations ?? $child->recommendations()->with('prediction')->latest('date_generated')->get();
+    $latestObservation = $latestObservation ?? $child->behaviouralRecords()->latest('observation_date')->latest('id')->first();
+    $latestRecordWithAssessment = $latestRecordWithAssessment ?? $child->behaviouralRecords()->whereNotNull('ml_assessment_inputs')->latest('observation_date')->latest('id')->first();
+
+    $activePredictedClass = isset($mlServiceResult['predicted_class'])
+        ? (string) $mlServiceResult['predicted_class']
+        : ($latestPrediction ? (string) $latestPrediction->predicted_outcome : null);
+
+    $activeIndicatorLabel = match ($activePredictedClass) {
+        '0' => 'On-Track',
+        '1' => 'May Need Additional Support',
+        default => 'Pending Assessment',
+    };
+
+    $activeIndicatorSubtitle = match ($activePredictedClass) {
+        '0' => 'Combines Improving and Slow Progress patterns in the developmental support dataset.',
+        '1' => 'At-Risk indicator — combines Plateau and Regression patterns that may benefit from targeted support.',
+        default => 'Automatic indicator will be generated once complete specialist assessment inputs are recorded.',
+    };
+
+    $activeIndicatorExplanation = match ($activePredictedClass) {
+        '0' => 'Your child\'s recorded sessions and specialist assessment inputs currently align with steady or gradual developmental progress. Importantly, an On-Track indicator is not proof that a child has no developmental difficulties—continued observation and support remain important.',
+        '1' => 'Your child\'s recorded sessions and specialist assessment inputs suggest areas where progress may have plateaued or where additional structured support could help. Importantly, this indicator is not a medical diagnosis—it is an exploratory guide to discuss with your child\'s clinician.',
+        default => 'No developmental progress indicator has been generated yet because specialist clinician assessment inputs are still pending.',
+    };
+
+    $class0Score = isset($mlServiceResult['class_scores']['0'])
+        ? (float) $mlServiceResult['class_scores']['0']
+        : ($latestPrediction && $latestPrediction->confidence_score !== null
+            ? ($activePredictedClass === '0' ? (float) $latestPrediction->confidence_score : max(0, 1 - (float) $latestPrediction->confidence_score))
+            : null);
+    $class1Score = isset($mlServiceResult['class_scores']['1'])
+        ? (float) $mlServiceResult['class_scores']['1']
+        : ($latestPrediction && $latestPrediction->confidence_score !== null
+            ? ($activePredictedClass === '1' ? (float) $latestPrediction->confidence_score : max(0, 1 - (float) $latestPrediction->confidence_score))
+            : null);
 @endphp
 
 <div class="flex min-h-screen">
@@ -122,6 +158,17 @@
                 </div>
             </div>
 
+            {{-- Account Settings --}}
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
     </aside>
@@ -156,15 +203,22 @@
                 </button>
 
                 {{-- User --}}
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $userAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
                     <div class="hidden sm:block leading-tight">
                         <p class="text-[13px] font-semibold">{{ auth()->user()->name }}</p>
                         <p class="text-[11px] text-[var(--ink-soft)]">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
-                </div>
+                </a>
 
                 {{-- Logout --}}
                 <form method="POST" action="{{ route('logout') }}">
@@ -186,8 +240,15 @@
             <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
 
                 <div class="flex items-start gap-4">
-                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center">
-                        <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                    @php
+                        $childAvatarUrl = $child->profilePictureUrl();
+                    @endphp
+                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center overflow-hidden">
+                        @if ($childAvatarUrl)
+                            <img src="{{ $childAvatarUrl }}" alt="{{ $child->first_name }} profile picture" class="w-full h-full object-cover">
+                        @else
+                            <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        @endif
                     </div>
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -320,13 +381,13 @@
                     </p>
                 </div>
 
-                {{-- Prediction Status / Confidence --}}
+                {{-- Prediction Status / Developmental Progress Indicator --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between text-xs text-[var(--ink-soft)]">
                         <span class="eyebrow uppercase">Prediction Status</span>
                         @if($latestPrediction)
                             <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                {{ $latestPrediction->confidence_score !== null ? number_format($latestPrediction->confidence_score * 100, 1) . '%' : 'Generated' }}
+                                {{ $latestPrediction->confidence_score !== null ? number_format($latestPrediction->confidence_score * 100, 1) . '%' : 'Updated' }}
                             </span>
                         @else
                             <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
@@ -334,11 +395,11 @@
                             </span>
                         @endif
                     </div>
-                    <p class="mt-3 text-3xl font-extrabold tracking-tight text-[var(--ink)]">
-                        {{ $latestPrediction ? 'Class ' . $latestPrediction->predicted_outcome : 'Pending' }}
+                    <p class="mt-3 text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--ink)]">
+                        {{ $latestPrediction ? $latestPrediction->caregiverIndicatorLabel() : 'Pending Assessment' }}
                     </p>
                     <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                        {{ $latestPrediction ? 'Generated ' . ($latestPrediction->date_generated?->format('M d, Y') ?? 'from ML model') : 'Awaiting clinician ML assessment' }}
+                        {{ $latestPrediction ? 'Updated ' . ($latestPrediction->date_generated?->format('M d, Y') ?? 'automatically') : 'Awaiting clinician assessment' }}
                     </p>
                 </div>
 
@@ -366,232 +427,174 @@
             </div>
 
 
-            {{-- ===================== ML PREDICTION SERVICE OUTPUT & RUNNER ===================== --}}
+            {{-- ===================== AUTOMATIC DEVELOPMENTAL PROGRESS INDICATOR ===================== --}}
+            <div id="prediction-loading-indicator" class="hidden mb-6 p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-xs font-semibold text-[var(--ink)] flex items-center gap-3" role="status" aria-live="polite">
+                <svg class="w-4 h-4 animate-spin text-[var(--ink)]" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <span>Checking for updated assessment information and refreshing developmental insights...</span>
+            </div>
+
             @if(session('success'))
                 <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
                     <span>{{ session('success') }}</span>
                 </div>
             @endif
+
             @if(!empty($mlServiceError))
-                <div class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between">
-                    <span>{{ $mlServiceError }}</span>
+                <div class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3" role="alert">
+                    <svg class="w-4 h-4 text-amber-700 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg>
+                    <div>
+                        <p class="font-bold">Developmental Progress Analysis Temporarily Unavailable</p>
+                        <p class="mt-0.5 text-amber-800">{{ $mlServiceError }}</p>
+                    </div>
                 </div>
             @endif
 
+            {{-- QUESTION 1 & 5: WHAT DOES THE LATEST ASSESSMENT INDICATE & WHEN WAS IT UPDATED? --}}
             <div class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6 mb-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     <div>
-                        <p class="eyebrow uppercase mb-1">Python ML Prediction Service</p>
-                        <h3 class="text-lg font-bold tracking-tight">ML Prediction Service Output</h3>
+                        <p class="eyebrow uppercase mb-1">1. What Does the Latest Assessment Indicate?</p>
+                        <h3 class="text-lg font-bold tracking-tight">Developmental Progress Indicator</h3>
                         <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                            Live inference results and historical predictions generated by <span class="font-mono text-[var(--ink)]">child_intervention_pipeline</span>.
+                            Generated automatically when complete observation and clinician assessment records are available for {{ $child->first_name }}.
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onclick="document.getElementById('ml-runner-panel').classList.toggle('hidden')"
-                        class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition cursor-pointer shrink-0"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Run ML Service Prediction
-                    </button>
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--canvas)] border border-[var(--line)] text-xs font-semibold text-[var(--ink-soft)] shrink-0">
+                        <span class="w-2 h-2 rounded-full {{ $activePredictedClass !== null ? 'bg-emerald-500' : 'bg-amber-400' }}"></span>
+                        <span>{{ $activePredictedClass !== null ? 'Automatic Indicator Active' : 'Awaiting Complete Assessment' }}</span>
+                    </div>
                 </div>
-
-                @php
-                    $activePredictedClass = isset($mlServiceResult['predicted_class'])
-                        ? (string) $mlServiceResult['predicted_class']
-                        : ($latestPrediction ? (string) $latestPrediction->predicted_outcome : null);
-                    $class0Score = isset($mlServiceResult['class_scores']['0'])
-                        ? (float) $mlServiceResult['class_scores']['0']
-                        : ($latestPrediction && $latestPrediction->confidence_score !== null
-                            ? ($activePredictedClass === '0' ? (float) $latestPrediction->confidence_score : max(0, 1 - (float) $latestPrediction->confidence_score))
-                            : null);
-                    $class1Score = isset($mlServiceResult['class_scores']['1'])
-                        ? (float) $mlServiceResult['class_scores']['1']
-                        : ($latestPrediction && $latestPrediction->confidence_score !== null
-                            ? ($activePredictedClass === '1' ? (float) $latestPrediction->confidence_score : max(0, 1 - (float) $latestPrediction->confidence_score))
-                            : null);
-                @endphp
 
                 @if($activePredictedClass !== null)
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-                        {{-- Latest Predicted Class --}}
-                        <div class="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex flex-col justify-between">
+                        {{-- Main Developmental Progress Indicator --}}
+                        <div class="p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex flex-col justify-between">
                             <div>
-                                <div class="flex items-center justify-between">
-                                    <span class="eyebrow uppercase">Predicted Outcome</span>
-                                    <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 uppercase">
-                                        Active Output
-                                    </span>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="eyebrow uppercase">Developmental Progress Indicator</span>
+                                    @if($activePredictedClass === '0')
+                                        <span class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 uppercase">
+                                            Steady / Gradual Progress
+                                        </span>
+                                    @else
+                                        <span class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 uppercase">
+                                            Targeted Support Advised
+                                        </span>
+                                    @endif
                                 </div>
-                                <p class="mt-3 text-3xl font-extrabold text-[var(--ink)]">
-                                    Class {{ $activePredictedClass }}
+                                <p class="mt-3 text-2xl sm:text-3xl font-extrabold {{ $activePredictedClass === '0' ? 'text-[var(--ink)]' : 'text-[var(--accent)]' }}">
+                                    {{ $activeIndicatorLabel }}
                                 </p>
-                                <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                                    Model: <span class="font-mono font-semibold">{{ $latestPrediction->model_used ?? 'child_intervention_pipeline' }}</span>
+                                <p class="mt-1.5 text-xs font-medium text-[var(--ink-soft)] leading-relaxed">
+                                    {{ $activeIndicatorSubtitle }}
+                                </p>
+                                <p class="mt-2.5 text-xs text-[var(--ink-soft)] leading-relaxed">
+                                    {{ $activeIndicatorExplanation }}
                                 </p>
                             </div>
-                            <p class="mt-3 pt-3 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)]">
-                                Generated: {{ $latestPrediction?->date_generated?->format('M d, Y H:i') ?? now()->format('M d, Y H:i') }}
-                            </p>
+                            <div class="mt-4 pt-3 border-t border-[var(--line)] flex items-center justify-between text-[11px] text-[var(--ink-soft)]">
+                                <span>5. Last Updated: <strong>{{ $latestPrediction?->date_generated?->format('M d, Y H:i') ?? now()->format('M d, Y H:i') }}</strong></span>
+                                <span>{{ $latestPrediction?->validated_by_clinician ? 'Clinician Validated' : 'Pending Clinician Review' }}</span>
+                            </div>
                         </div>
 
-                        {{-- Class Scores Breakdown --}}
-                        <div class="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex flex-col justify-between">
+                        {{-- Simplified Model Assessment Scores --}}
+                        <div class="p-5 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex flex-col justify-between">
                             <div>
-                                <span class="eyebrow uppercase">Uncalibrated Class Scores</span>
-                                <div class="mt-3 space-y-3">
+                                <span class="eyebrow uppercase">Model Assessment Scores</span>
+                                <p class="text-xs text-[var(--ink-soft)] mt-1">
+                                    Relative alignment with each support pattern based on recorded sessions and assessment inputs:
+                                </p>
+                                <div class="mt-3.5 space-y-3">
                                     <div>
                                         <div class="flex items-center justify-between text-xs font-semibold mb-1">
-                                            <span>Class 0 Score</span>
+                                            <span>On-Track Alignment Score</span>
                                             <span>{{ $class0Score !== null ? number_format($class0Score * 100, 1) . '%' : '—' }}</span>
                                         </div>
                                         <div class="w-full h-2 bg-[var(--line)] rounded-full overflow-hidden">
-                                            <div class="h-full bg-[var(--accent)] rounded-full" style="width: {{ $class0Score !== null ? round($class0Score * 100) : 0 }}%;"></div>
+                                            <div class="h-full bg-[var(--ink)] rounded-full" style="width: {{ $class0Score !== null ? round($class0Score * 100) : 0 }}%;"></div>
                                         </div>
                                     </div>
                                     <div>
                                         <div class="flex items-center justify-between text-xs font-semibold mb-1">
-                                            <span>Class 1 Score</span>
+                                            <span>Additional Support Alignment Score</span>
                                             <span>{{ $class1Score !== null ? number_format($class1Score * 100, 1) . '%' : '—' }}</span>
                                         </div>
                                         <div class="w-full h-2 bg-[var(--line)] rounded-full overflow-hidden">
-                                            <div class="h-full bg-[var(--ink)] rounded-full" style="width: {{ $class1Score !== null ? round($class1Score * 100) : 0 }}%;"></div>
+                                            <div class="h-full bg-[var(--accent)] rounded-full" style="width: {{ $class1Score !== null ? round($class1Score * 100) : 0 }}%;"></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <p class="mt-3 pt-3 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)]">
-                                {{ $mlServiceResult['score_interpretation'] ?? 'Uncalibrated model scores; they are not validated clinical probabilities.' }}
+                            <p class="mt-4 pt-3 border-t border-[var(--line)] text-[11px] text-[var(--ink-soft)] leading-relaxed">
+                                <strong>How to read these scores:</strong> These are uncalibrated model scores, not confirmed clinical probabilities or a percentage guarantee of developmental success.
                             </p>
                         </div>
 
-                        {{-- Model Interpretation & Disclaimer --}}
-                        <div class="p-4 rounded-xl bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex flex-col justify-between">
+                        {{-- Caregiver Guidance & Clinician Consultation --}}
+                        <div class="p-5 rounded-xl bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex flex-col justify-between">
                             <div>
-                                <span class="eyebrow uppercase text-[var(--accent)]">Service Interpretation</span>
-                                <p class="mt-2 text-xs font-semibold leading-relaxed">
-                                    {{ $mlServiceResult['disclaimer'] ?? 'For exploratory decision support only. This result is not a diagnosis and must not replace assessment or professional judgement by a qualified practitioner.' }}
+                                <span class="eyebrow uppercase text-[var(--accent)]">6. Should You Discuss This with a Clinician?</span>
+                                <p class="mt-2 text-xs font-semibold leading-relaxed text-[var(--ink)]">
+                                    Yes. Share this progress indicator with {{ $child->first_name }}'s clinician during regular reviews so they can interpret it alongside in-person developmental assessments.
                                 </p>
+                                <ul class="mt-2.5 space-y-1.5 text-xs text-[var(--ink-soft)]">
+                                    <li>&bull; <strong>On-Track</strong> does not mean a child has no developmental difficulties.</li>
+                                    <li>&bull; <strong>May Need Additional Support</strong> is an exploratory prompt, not a medical diagnosis.</li>
+                                </ul>
                             </div>
-                            <div class="mt-3 pt-3 border-t border-[var(--accent-soft)] flex items-center justify-between text-[11px] font-semibold text-[var(--accent)]">
-                                <span>14 Features Evaluated</span>
-                                <span>FastAPI ML Pipeline</span>
+                            <div class="mt-4 pt-3 border-t border-[var(--accent-soft)] flex items-center justify-between text-[11px] font-semibold text-[var(--accent)]">
+                                <span>Exploratory Decision Support</span>
+                                <span>Practitioner Interpretation Required</span>
                             </div>
                         </div>
                     </div>
                 @else
                     <div class="p-6 rounded-xl bg-[var(--canvas)] border border-dashed border-[var(--line)] text-center mb-4">
-                        <p class="text-sm font-bold">No ML Service Prediction Generated Yet</p>
-                        <p class="text-xs text-[var(--ink-soft)] mt-1 max-w-lg mx-auto">
-                            Click <strong>Run ML Service Prediction</strong> above to submit the 14 model features for {{ $child->first_name }} to the Python ML prediction service and display the predicted outcome and class scores here.
+                        <div class="w-10 h-10 rounded-full bg-white border border-[var(--line)] flex items-center justify-center mx-auto text-[var(--accent)] mb-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <p class="text-sm font-bold">Developmental Progress Indicator Pending Clinician Assessment</p>
+                        <p class="text-xs text-[var(--ink-soft)] mt-1.5 max-w-xl mx-auto leading-relaxed">
+                            Complete specialist assessment inputs and at least two behavioural observation sessions are needed to generate an accurate progress indicator for {{ $child->first_name }}. No indicator is shown until verified data is recorded—once your clinician completes the assessment, the result will appear here automatically.
                         </p>
                     </div>
                 @endif
 
-                {{-- Expandable 14-Feature ML Service Runner Form --}}
-                <div id="ml-runner-panel" class="{{ $errors->any() ? '' : 'hidden' }} mt-4 pt-5 border-t border-[var(--line)]">
-                    <h4 class="text-sm font-bold mb-1">Run Python ML Service Prediction (14 Features)</h4>
-                    <p class="text-xs text-[var(--ink-soft)] mb-4">
-                        Verify or complete the 14 assessment inputs required by <span class="font-mono">child_intervention_pipeline.joblib</span> and submit to fetch a prediction from the ML service.
-                    </p>
-
-                    <form method="POST" action="{{ route('children.predictions-analytics.generate', $child) }}" class="space-y-4">
-                        @csrf
-                        @php
-                            $defaultAvgFirst2 = $avgSuccessFirst2 !== null ? round($avgSuccessFirst2, 1) : 65.0;
-                            $defaultAgeYears = $child->age_in_months ? round($child->age_in_months / 12, 1) : 4.0;
-                            $defaultGender = strtolower($child->sex ?? 'female');
-                        @endphp
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                            <div>
-                                <label class="block font-semibold mb-1">Avg Success First 2 (%)</label>
-                                <input type="number" step="any" name="avg_success_first_2" value="{{ old('avg_success_first_2', $assessmentInputs['avg_success_first_2'] ?? $defaultAvgFirst2) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Age (Years)</label>
-                                <input type="number" step="any" name="age_years" value="{{ old('age_years', $assessmentInputs['age_years'] ?? $defaultAgeYears) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">ADOS-2 Social Affect</label>
-                                <input type="number" step="any" name="ados2_social_affect" value="{{ old('ados2_social_affect', $assessmentInputs['ados2_social_affect'] ?? 8) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">ADOS-2 RRB Score</label>
-                                <input type="number" step="any" name="ados2_rrb" value="{{ old('ados2_rrb', $assessmentInputs['ados2_rrb'] ?? 4) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Cognitive Verbal %ile</label>
-                                <input type="number" step="any" name="cognitive_verbal_percentile" value="{{ old('cognitive_verbal_percentile', $assessmentInputs['cognitive_verbal_percentile'] ?? 45) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Cognitive Nonverbal %ile</label>
-                                <input type="number" step="any" name="cognitive_nonverbal_percentile" value="{{ old('cognitive_nonverbal_percentile', $assessmentInputs['cognitive_nonverbal_percentile'] ?? 55) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Cognitive GCA %ile</label>
-                                <input type="number" step="any" name="cognitive_gca_percentile" value="{{ old('cognitive_gca_percentile', $assessmentInputs['cognitive_gca_percentile'] ?? 48) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Adaptive Composite %ile</label>
-                                <input type="number" step="any" name="adaptive_composite_percentile" value="{{ old('adaptive_composite_percentile', $assessmentInputs['adaptive_composite_percentile'] ?? 50) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Concurrent Services</label>
-                                <input type="number" name="num_current_services" value="{{ old('num_current_services', $assessmentInputs['num_current_services'] ?? 2) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Assessment Domain</label>
-                                <input type="text" name="domain" value="{{ old('domain', $assessmentInputs['domain'] ?? 'communication') }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Gender</label>
-                                <input type="text" name="gender" value="{{ old('gender', $assessmentInputs['gender'] ?? $defaultGender) }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Support Level</label>
-                                <input type="text" name="support_level" value="{{ old('support_level', $assessmentInputs['support_level'] ?? 'moderate') }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">Primary Domain</label>
-                                <input type="text" name="primary_domain" value="{{ old('primary_domain', $assessmentInputs['primary_domain'] ?? 'social') }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                            <div>
-                                <label class="block font-semibold mb-1">ADOS-2 Comparison Score</label>
-                                <input type="text" name="ados2_comparison_score" value="{{ old('ados2_comparison_score', $assessmentInputs['ados2_comparison_score'] ?? 'moderate') }}" required class="w-full rounded-lg border border-[var(--line)] bg-[var(--canvas)] px-3 py-2">
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end gap-3 pt-2">
-                            <button type="submit" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition cursor-pointer">
-                                Generate Prediction from ML Service
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
                 {{-- Historical Predictions Table --}}
                 @if(isset($predictions) && $predictions->isNotEmpty())
                     <div class="mt-5 pt-5 border-t border-[var(--line)]">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--ink-soft)] mb-3">Prediction History ({{ $predictions->count() }})</h4>
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--ink-soft)]">Prediction History &amp; Update Timeline ({{ $predictions->count() }})</h4>
+                            <span class="text-[11px] text-[var(--ink-soft)]">
+                                Latest behavioral observation: {{ $latestObservation?->observation_date?->format('M d, Y') ?? 'None recorded' }}
+                            </span>
+                        </div>
                         <div class="overflow-x-auto border border-[var(--line)] rounded-xl">
                             <table class="min-w-full text-xs">
                                 <thead class="bg-[var(--canvas)]">
                                     <tr class="border-b border-[var(--line)] text-left font-semibold uppercase text-[var(--ink-soft)]">
-                                        <th class="py-2.5 px-4">Date Generated</th>
-                                        <th class="py-2.5 px-3">Model Used</th>
-                                        <th class="py-2.5 px-3">Predicted Outcome</th>
-                                        <th class="py-2.5 px-3">Model Score</th>
-                                        <th class="py-2.5 px-4 text-right">Validation Status</th>
+                                        <th class="py-2.5 px-4">Date Updated</th>
+                                        <th class="py-2.5 px-3">Developmental Progress Indicator</th>
+                                        <th class="py-2.5 px-3">Model Assessment Score</th>
+                                        <th class="py-2.5 px-3">Linked Observation</th>
+                                        <th class="py-2.5 px-4 text-right">Clinician Review</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[var(--line)] bg-white">
                                     @foreach($predictions as $predItem)
                                         <tr class="analytics-searchable hover:bg-[var(--canvas)] transition">
                                             <td class="py-2.5 px-4 font-medium">{{ $predItem->date_generated?->format('M d, Y H:i') ?? '—' }}</td>
-                                            <td class="py-2.5 px-3 font-mono text-[var(--ink-soft)]">{{ $predItem->model_used }}</td>
-                                            <td class="py-2.5 px-3 font-bold text-[var(--ink)]">Class {{ $predItem->predicted_outcome }}</td>
-                                            <td class="py-2.5 px-3">{{ $predItem->confidence_score !== null ? number_format($predItem->confidence_score * 100, 1) . '%' : 'Uncalibrated' }}</td>
+                                            <td class="py-2.5 px-3 font-bold text-[var(--ink)]">
+                                                {{ $predItem->caregiverIndicatorLabel() }}
+                                            </td>
+                                            <td class="py-2.5 px-3">{{ $predItem->confidence_score !== null ? number_format($predItem->confidence_score * 100, 1) . '% (uncalibrated)' : 'Uncalibrated' }}</td>
+                                            <td class="py-2.5 px-3 text-[var(--ink-soft)]">
+                                                {{ $predItem->observation?->observation_date?->format('M d, Y') ?? 'Observation #' . $predItem->observation_id }}
+                                            </td>
                                             <td class="py-2.5 px-4 text-right">
                                                 @if($predItem->validated_by_clinician)
                                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 border border-teal-300 text-teal-800 uppercase">Validated</span>
@@ -604,6 +607,164 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                @endif
+            </div>
+
+
+            {{-- ===================== QUESTIONS 2 & 3: PROGRESSING WELL VS AREAS NEEDING SUPPORT ===================== --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {{-- Question 2: What areas appear to be progressing well? --}}
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="eyebrow uppercase">2. What Areas Appear to Be Progressing Well?</p>
+                            <h3 class="text-base font-bold tracking-tight">Observed Developmental Strengths</h3>
+                        </div>
+                    </div>
+
+                    @if($childTotalRecords > 0)
+                        <ul class="space-y-2.5 text-xs text-[var(--ink-soft)] mt-3">
+                            @if($avgCommunication >= 5)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Communication ({{ number_format($avgCommunication, 1) }}/10):</span>
+                                    {{ $child->first_name }} is showing encouraging responsiveness during communication activities across {{ $childTotalRecords }} recorded {{ Str::plural('session', $childTotalRecords) }}.
+                                </li>
+                            @endif
+                            @if($avgEngagement >= 5)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Activity Engagement ({{ number_format($avgEngagement, 1) }}/10):</span>
+                                    Maintains steady attention and participation during structured learning intervals.
+                                </li>
+                            @endif
+                            @if($avgSocial >= 5)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Social Interaction ({{ number_format($avgSocial, 1) }}/10):</span>
+                                    Demonstrates positive turn-taking and shared interaction with caregivers or peers.
+                                </li>
+                            @endif
+                            @if($avgRepetitive !== null && $avgRepetitive <= 3.5)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Behavioural Regulation ({{ number_format($avgRepetitive, 1) }}/10 repetition):</span>
+                                    Low frequency of repetitive behaviours during daily routines and transitions.
+                                </li>
+                            @endif
+                            @if($avgCommunication < 5 && $avgEngagement < 5 && $avgSocial < 5 && ($avgRepetitive === null || $avgRepetitive > 3.5))
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Consistent Observation Tracking:</span>
+                                    {{ $childTotalRecords }} {{ Str::plural('session', $childTotalRecords) }} logged with an average task completion of {{ number_format($childAvgSuccess ?? 0, 0) }}%, providing a clear baseline for support planning.
+                                </li>
+                            @endif
+                        </ul>
+                    @else
+                        <p class="text-xs text-[var(--ink-soft)] mt-2 leading-relaxed">
+                            No behavioural observations have been logged yet. Record daily observations for {{ $child->first_name }} to highlight areas of steady progress.
+                        </p>
+                    @endif
+                </div>
+
+                {{-- Question 3: Which areas may need additional support? --}}
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"/></svg>
+                        </div>
+                        <div>
+                            <p class="eyebrow uppercase">3. Which Areas May Need Additional Support?</p>
+                            <h3 class="text-base font-bold tracking-tight">Focus Areas for Extra Scaffolding</h3>
+                        </div>
+                    </div>
+
+                    @if($childTotalRecords > 0 || !empty($assessmentInputs))
+                        <ul class="space-y-2.5 text-xs text-[var(--ink-soft)] mt-3">
+                            @if(!empty($assessmentInputs['primary_domain']) || !empty($assessmentInputs['domain']))
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Clinician Focus Domain ({{ ucfirst($assessmentInputs['primary_domain'] ?? $assessmentInputs['domain']) }}):</span>
+                                    Identified in the latest assessment as a priority developmental area for structured activities and routine support.
+                                </li>
+                            @endif
+                            @if($avgCommunication !== null && $avgCommunication < 6)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Expressive &amp; Receptive Communication ({{ number_format($avgCommunication, 1) }}/10):</span>
+                                    May benefit from visual cards, gesture pairing, and step-by-step verbal prompts.
+                                </li>
+                            @endif
+                            @if($avgSocial !== null && $avgSocial < 6)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Social Reciprocity ({{ number_format($avgSocial, 1) }}/10):</span>
+                                    May benefit from short, guided turn-taking games in calm environments.
+                                </li>
+                            @endif
+                            @if($avgRepetitive !== null && $avgRepetitive > 3.5)
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Sensory &amp; Transition Pacing ({{ number_format($avgRepetitive, 1) }}/10):</span>
+                                    Scheduled sensory breaks and visual countdown timers can help ease routine transitions.
+                                </li>
+                            @endif
+                            @if(empty($assessmentInputs['primary_domain']) && empty($assessmentInputs['domain']) && ($avgCommunication === null || $avgCommunication >= 6) && ($avgSocial === null || $avgSocial >= 6) && ($avgRepetitive === null || $avgRepetitive <= 3.5))
+                                <li class="p-3 rounded-xl bg-[var(--canvas)] border border-[var(--line)]">
+                                    <span class="font-bold text-[var(--ink)]">Skill Generalization Across Settings:</span>
+                                    Continue practising communication and social routines across home and community environments with your clinician's guidance.
+                                </li>
+                            @endif
+                        </ul>
+                    @else
+                        <p class="text-xs text-[var(--ink-soft)] mt-2 leading-relaxed">
+                            Focus areas will appear here automatically once behavioural observations or clinician assessments are recorded for {{ $child->first_name }}.
+                        </p>
+                    @endif
+                </div>
+            </div>
+
+
+            {{-- ===================== QUESTION 4: WHAT ACTIVITIES OR RECOMMENDATIONS ARE AVAILABLE? ===================== --}}
+            <div class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6 mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <div>
+                        <p class="eyebrow uppercase mb-1">4. What Activities or Recommendations Are Available?</p>
+                        <h3 class="text-lg font-bold tracking-tight">Suggested Support Activities &amp; Recommendations</h3>
+                        <p class="text-xs text-[var(--ink-soft)] mt-0.5">
+                            Practical, non-diagnostic activity suggestions linked to {{ $child->first_name }}'s recorded observations and progress indicator. Please discuss these suggestions with your child's clinician.
+                        </p>
+                    </div>
+                    <a href="{{ route('children.recommendations', $child) }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink)] bg-[var(--canvas)] border border-[var(--line)] px-3.5 py-2 rounded-lg hover:border-[var(--ink)] transition shrink-0">
+                        View Full Recommendations Page &rarr;
+                    </a>
+                </div>
+
+                @if($recommendations->isNotEmpty())
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($recommendations->take(4) as $recItem)
+                            <div class="analytics-searchable p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between gap-2 mb-2">
+                                        <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--accent-tint)] border border-[var(--accent-soft)] text-[var(--accent)]">
+                                            Developmental Area: {{ $recItem->category }}
+                                        </span>
+                                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white border border-[var(--line)] text-[var(--ink)]">
+                                            {{ ucfirst($recItem->status ?? 'Active') }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs font-semibold text-[var(--ink)] leading-relaxed">
+                                        {{ $recItem->recommendation_text }}
+                                    </p>
+                                </div>
+                                <div class="mt-3 pt-2.5 border-t border-[var(--line)] flex items-center justify-between text-[11px] text-[var(--ink-soft)]">
+                                    <span>Generated {{ $recItem->date_generated?->format('M d, Y') ?? 'Recently' }}</span>
+                                    <span>Discuss with your clinician</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-5 rounded-xl bg-[var(--canvas)] border border-dashed border-[var(--line)] text-center">
+                        <p class="text-sm font-bold">No Specific Activity Recommendations Recorded Yet</p>
+                        <p class="text-xs text-[var(--ink-soft)] mt-1 max-w-lg mx-auto">
+                            Support recommendations will be generated automatically once a developmental progress indicator or behavioural observations are recorded for {{ $child->first_name }}.
+                        </p>
                     </div>
                 @endif
             </div>
@@ -1261,7 +1422,7 @@
                                             {{ $val->date_generated?->format('Y-m-d') ?? '—' }}
                                         </td>
                                         <td class="py-3.5 px-3 text-xs font-medium whitespace-nowrap">
-                                            Class {{ $val->predicted_outcome }}
+                                            {{ $val->caregiverIndicatorLabel() }}
                                         </td>
                                         <td class="py-3.5 px-3 whitespace-nowrap">
                                             <span class="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full border border-teal-300 bg-teal-50 text-teal-800 uppercase">
@@ -1383,6 +1544,13 @@
             }
         });
     }
+
+    window.addEventListener('beforeunload', function () {
+        const loader = document.getElementById('prediction-loading-indicator');
+        if (loader) {
+            loader.classList.remove('hidden');
+        }
+    });
 </script>
 
 </body>

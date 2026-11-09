@@ -7,10 +7,17 @@ use App\Http\Controllers\CaregiverDashboardController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\ClinicianDashboardController;
 use App\Http\Controllers\PredictionController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'role:caregiver'])->group(function () {
@@ -27,11 +34,13 @@ Route::middleware(['auth', 'role:caregiver'])->group(function () {
     Route::get('/children/{child}/recommendations', [ChildController::class, 'recommendations'])
         ->name('children.recommendations');
 
+    Route::patch(
+        '/children/{child}/recommendations/{recommendation}/status',
+        [ChildController::class, 'updateRecommendationStatus']
+    )->name('children.recommendations.update-status');
+
     Route::get('/children/{child}/predictions-analytics', [ChildController::class, 'predictionsAnalytics'])
         ->name('children.predictions-analytics');
-
-    Route::post('/children/{child}/predictions-analytics/generate', [ChildController::class, 'generatePrediction'])
-        ->name('children.predictions-analytics.generate');
 
     Route::resource('children', ChildController::class);
 
@@ -58,6 +67,11 @@ Route::middleware(['auth', 'role:clinician'])->group(function () {
         '/clinician/predictions',
         [PredictionController::class, 'clinicianIndex']
     )->name('clinician.predictions.index');
+
+    Route::patch(
+        '/clinician/predictions/{prediction}/validate',
+        [PredictionController::class, 'validatePrediction']
+    )->name('clinician.predictions.validate');
 
     Route::get(
         '/clinician/observations/{behaviouralRecord}/assessment',

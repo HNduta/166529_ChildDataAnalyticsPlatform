@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Child;
+use App\Models\User;
 use Illuminate\View\View;
 
 class AdministratorDashboardController extends Controller
@@ -11,6 +13,21 @@ class AdministratorDashboardController extends Controller
      */
     public function index(): View
     {
-        return view('administrator.dashboard');
+        $practitioners = User::query()
+            ->latest()
+            ->get();
+
+        $totalUsersCount = $practitioners->count();
+        $clinicianCount = $practitioners->where('role', 'clinician')->count();
+        $caregiverCount = $practitioners->where('role', 'caregiver')->count();
+        $childrenCount = Child::count();
+
+        return view('administrator.dashboard', compact(
+            'practitioners',
+            'totalUsersCount',
+            'clinicianCount',
+            'caregiverCount',
+            'childrenCount'
+        ));
     }
 }

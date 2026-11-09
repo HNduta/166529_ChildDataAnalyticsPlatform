@@ -93,6 +93,16 @@
                     </a>
                 </div>
             </div>
+
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
         </nav>
     </aside>
 
@@ -115,17 +125,22 @@
                 <button class="relative w-9 h-9 rounded-lg border border-[var(--line)] flex items-center justify-center" aria-label="Notifications">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 21a2 2 0 004 0"/></svg>
                 </button>
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{-- DATA: auth()->user() initials --}}
-                        CG
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $caregiverAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($caregiverAvatarUrl)
+                            <img src="{{ $caregiverAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()?->initials() ?? 'CG' }}
+                        @endif
                     </div>
                     <div class="hidden sm:block leading-tight">
-                        {{-- DATA: auth()->user()->name --}}
-                        <p class="text-[13px] font-semibold">Caregiver</p>
-                        <p class="text-[11px] text-[var(--ink-soft)]">Caregiver</p>
+                        <p class="text-[13px] font-semibold">{{ auth()->user()->name ?? 'Caregiver' }}</p>
+                        <p class="text-[11px] text-[var(--ink-soft)]">{{ ucfirst(auth()->user()->role ?? 'Caregiver') }}</p>
                     </div>
-                </div>
+                </a>
             </div>
         </header>
 
@@ -154,8 +169,43 @@
                 {{-- Form card --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-6 sm:p-8">
 
-                    <form method="POST" action="{{ route('children.store') }}">
+                    <form method="POST" action="{{ route('children.store') }}" enctype="multipart/form-data">
                         @csrf
+
+                        {{-- Child's Profile Picture --}}
+                        <div class="mb-6">
+                            <label class="field-label">Child's Profile Picture <span class="text-[var(--ink-soft)] font-normal">(Optional)</span></label>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-[var(--line)] bg-[var(--canvas)]">
+                                <div class="w-16 h-16 shrink-0 rounded-2xl bg-[var(--accent-tint)] border-2 border-[var(--accent-soft)] flex items-center justify-center overflow-hidden text-[var(--accent)] shadow-sm">
+                                    <svg id="childAvatarDefaultIcon" class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                                    <img id="childAvatarPreview" src="" alt="Child profile picture preview" class="hidden w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 min-w-0 space-y-2">
+                                    <div class="flex flex-wrap items-center gap-2.5">
+                                        <label
+                                            for="profile_picture"
+                                            class="inline-flex items-center gap-2 bg-white border border-[var(--line)] text-[var(--ink)] hover:border-[var(--ink)] text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer transition shadow-sm"
+                                        >
+                                            <svg class="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path d="M4 16l4.5-4.5a2 2 0 012.8 0L16 16m-2-2l1.5-1.5a2 2 0 012.8 0L20 14"/>
+                                                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                            </svg>
+                                            <span>Choose Child Photo</span>
+                                        </label>
+                                        <span id="createChildPhotoFilename" class="text-xs text-[var(--ink-soft)] truncate max-w-[220px]">No file selected</span>
+                                        <input
+                                            id="profile_picture"
+                                            type="file"
+                                            name="profile_picture"
+                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                            class="sr-only"
+                                        >
+                                    </div>
+                                    <p class="text-xs text-[var(--ink-soft)]">Accepted formats: JPG, PNG, WEBP up to 2 MB. A default avatar will be used if left blank.</p>
+                                </div>
+                            </div>
+                        </div>
 
                         {{-- Child's name --}}
                         <div class="mb-6">
@@ -254,5 +304,29 @@
         </main>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.getElementById('profile_picture');
+        const preview = document.getElementById('childAvatarPreview');
+        const icon = document.getElementById('childAvatarDefaultIcon');
+        const label = document.getElementById('createChildPhotoFilename');
+        if (input) {
+            input.addEventListener('change', function (e) {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                if (label) label.textContent = file.name;
+                if (file.type.startsWith('image/') && preview) {
+                    const reader = new FileReader();
+                    reader.onload = function (ev) {
+                        preview.src = ev.target.result;
+                        preview.classList.remove('hidden');
+                        if (icon) icon.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>

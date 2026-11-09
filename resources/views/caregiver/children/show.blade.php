@@ -118,6 +118,17 @@
                 </div>
             </div>
 
+            {{-- Account Settings --}}
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
     </aside>
@@ -153,15 +164,22 @@
                 </button>
 
                 {{-- User --}}
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $userAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
                     <div class="hidden sm:block leading-tight">
                         <p class="text-[13px] font-semibold">{{ auth()->user()->name }}</p>
                         <p class="text-[11px] text-[var(--ink-soft)]">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
-                </div>
+                </a>
 
                 {{-- Logout --}}
                 <form method="POST" action="{{ route('logout') }}">
@@ -185,11 +203,18 @@
                 <div class="flex items-start gap-4">
 
                     {{-- Child Avatar --}}
-                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center">
-                        <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <circle cx="12" cy="8" r="4"/>
-                            <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
-                        </svg>
+                    @php
+                        $childAvatarUrl = $child->profilePictureUrl();
+                    @endphp
+                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center overflow-hidden">
+                        @if ($childAvatarUrl)
+                            <img src="{{ $childAvatarUrl }}" alt="{{ $child->first_name }} profile picture" class="w-full h-full object-cover">
+                        @else
+                            <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="8" r="4"/>
+                                <path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>
+                            </svg>
+                        @endif
                     </div>
 
                     {{-- Child Details --}}
@@ -293,12 +318,12 @@
                     </div>
 
                     <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
-                        <p class="eyebrow uppercase">ML Assessment</p>
-                        <p class="mt-2 text-2xl font-extrabold tracking-tight text-[var(--ink)]">
-                            {{ $latestPrediction ? 'Class ' . $latestPrediction->predicted_outcome : 'Pending' }}
+                        <p class="eyebrow uppercase">Developmental Progress Indicator</p>
+                        <p class="mt-2 text-xl font-extrabold tracking-tight text-[var(--ink)]">
+                            {{ $latestPrediction ? $latestPrediction->caregiverIndicatorLabel() : 'Pending' }}
                         </p>
                         <p class="mt-1 text-xs text-[var(--ink-soft)]">
-                            {{ $latestPrediction ? 'Generated ' . ($latestPrediction->date_generated?->format('M d') ?? '') : 'Awaiting clinician assessment' }}
+                            {{ $latestPrediction ? 'Updated ' . ($latestPrediction->date_generated?->format('M d, Y') ?? '') : 'Awaiting clinician assessment' }}
                         </p>
                     </div>
 

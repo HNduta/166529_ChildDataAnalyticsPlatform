@@ -81,8 +81,55 @@
 
             </ul>
 
-            {{-- Decorative Illustration Placeholder --}}
-            <div class="flex-1 min-h-[220px] rounded-2xl skel"></div>
+            {{-- User-Supplied Login Image or Clearly Identified Placeholder --}}
+            @php
+                $loginImageCandidates = [
+                    'images/auth/login.png',
+                    'images/auth/login.jpg',
+                    'images/auth/login.jpeg',
+                    'images/auth/login.webp',
+                    'images/auth/login-illustration.png',
+                    'images/auth/login-illustration.jpg',
+                    'images/auth/login-illustration.jpeg',
+                    'images/auth/login-illustration.webp',
+                ];
+                $loginImagePath = null;
+                foreach ($loginImageCandidates as $candidate) {
+                    if (is_file(public_path($candidate))) {
+                        $loginImagePath = $candidate;
+                        break;
+                    }
+                }
+            @endphp
+
+            <div class="flex-1 min-h-[240px] rounded-2xl overflow-hidden border border-[var(--line)] bg-[var(--canvas)] flex flex-col">
+                @if ($loginImagePath)
+                    <img
+                        src="{{ asset($loginImagePath) }}"
+                        alt="AutiSync Caregiver and Clinician Support"
+                        class="w-full h-full object-cover flex-1"
+                    >
+                @else
+                    <div id="login-image-placeholder" class="flex-1 p-6 flex flex-col items-center justify-center text-center border-2 border-dashed border-[var(--accent-soft)] rounded-2xl bg-[var(--accent-tint)]/50">
+                        <div class="w-12 h-12 rounded-2xl bg-white border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)] mb-3 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 20"/>
+                            </svg>
+                        </div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)] bg-white border border-[var(--accent-soft)] px-2.5 py-0.5 rounded-full mb-2">
+                            Login Image Placeholder
+                        </span>
+                        <p class="text-sm font-bold text-[var(--ink)] max-w-xs">
+                            Supporting every child's developmental journey with clarity and care
+                        </p>
+                        <p class="text-xs text-[var(--ink-soft)] mt-1.5 max-w-xs leading-relaxed">
+                            Place your custom login page image at <code class="font-mono text-[11px] bg-white px-1.5 py-0.5 rounded border border-[var(--line)]">public/images/auth/login.jpg</code> (or <code class="font-mono text-[11px]">.png</code> / <code class="font-mono text-[11px]">.webp</code>) to display it here automatically.
+                        </p>
+                    </div>
+                @endif
+            </div>
 
             {{-- Footer --}}
             <p class="text-[12px] text-[var(--ink-soft)] mt-8">
@@ -98,17 +145,32 @@
 
             <div class="w-full max-w-sm">
 
-                {{-- Mobile Brand --}}
-                <div class="lg:hidden flex items-center gap-2 mb-8">
-
-                    <div class="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-white text-sm font-bold">
-                        A
+                {{-- Mobile Brand & Visual Banner --}}
+                <div class="lg:hidden mb-6 space-y-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-white text-sm font-bold">
+                            A
+                        </div>
+                        <span class="text-[15px] font-bold tracking-tight">
+                            AutiSync
+                        </span>
                     </div>
 
-                    <span class="text-[15px] font-bold tracking-tight">
-                        AutiSync
-                    </span>
-
+                    @if ($loginImagePath)
+                        <div class="h-36 rounded-2xl overflow-hidden border border-[var(--line)] bg-white">
+                            <img src="{{ asset($loginImagePath) }}" alt="AutiSync Login" class="w-full h-full object-cover">
+                        </div>
+                    @else
+                        <div class="p-3.5 rounded-xl border border-dashed border-[var(--accent-soft)] bg-[var(--accent-tint)]/50 text-xs text-[var(--ink-soft)] flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)] shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-[var(--ink)]">Login Image Placeholder</p>
+                                <p class="text-[11px]">Supply <code class="font-mono">public/images/auth/login.jpg</code></p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
 

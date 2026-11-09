@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 
 class Child extends Model
 {
@@ -15,12 +16,41 @@ class Child extends Model
     protected $fillable = [
         'caregiver_id',
         'first_name',
+        'profile_picture',
         'age_in_months',
         'sex',
         'born_with_jaundice',
         'family_member_with_asd',
         'diagnosis_confirmed',
     ];
+
+    public function profilePictureUrl(): ?string
+    {
+        if (!empty($this->profile_picture)) {
+            $cleanPath = ltrim(str_replace('\\', '/', $this->profile_picture), '/');
+            return asset('storage/' . $cleanPath);
+        }
+
+        $candidates = [
+            'images/avatars/default-child.png',
+            'images/avatars/default-child.jpg',
+            'images/avatars/default-child.jpeg',
+            'images/avatars/default-child.webp',
+        ];
+
+        foreach ($candidates as $relPath) {
+            if (is_file(public_path($relPath))) {
+                return asset($relPath);
+            }
+        }
+
+        return null;
+    }
+
+    public function initials(): string
+    {
+        return strtoupper(substr(trim((string) $this->first_name), 0, 2) ?: 'CH');
+    }
 
     protected function casts(): array
     {

@@ -115,6 +115,17 @@
                 </div>
             </div>
 
+            {{-- Account Settings --}}
+            <div>
+                <p class="eyebrow px-3 mb-2 uppercase">Account Settings</p>
+                <div class="space-y-1">
+                    <a href="{{ route('profile.edit') }}" class="navlink">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        Profile &amp; Picture
+                    </a>
+                </div>
+            </div>
+
         </nav>
 
     </aside>
@@ -147,15 +158,22 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 21a2 2 0 004 0"/></svg>
                 </button>
 
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition" title="Profile Settings">
+                    @php
+                        $userAvatarUrl = auth()->user()?->profilePictureUrl();
+                    @endphp
+                    <div class="w-8 h-8 rounded-full bg-[var(--canvas)] border border-[var(--line)] flex items-center justify-center text-xs font-semibold overflow-hidden">
+                        @if ($userAvatarUrl)
+                            <img src="{{ $userAvatarUrl }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                        @else
+                            {{ auth()->user()->initials() }}
+                        @endif
                     </div>
                     <div class="hidden sm:block leading-tight">
                         <p class="text-[13px] font-semibold">{{ auth()->user()->name }}</p>
                         <p class="text-[11px] text-[var(--ink-soft)]">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
-                </div>
+                </a>
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -174,8 +192,15 @@
             <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
 
                 <div class="flex items-start gap-4">
-                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center">
-                        <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                    @php
+                        $childAvatarUrl = $child->profilePictureUrl();
+                    @endphp
+                    <div class="w-20 h-20 shrink-0 border-2 border-[var(--accent-soft)] bg-[var(--accent-tint)] rounded-2xl flex items-center justify-center overflow-hidden">
+                        @if ($childAvatarUrl)
+                            <img src="{{ $childAvatarUrl }}" alt="{{ $child->first_name }} profile picture" class="w-full h-full object-cover">
+                        @else
+                            <svg class="w-8 h-8 text-[var(--accent)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        @endif
                     </div>
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -416,12 +441,12 @@
                                     <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full border border-[var(--ink)] bg-[var(--canvas)] text-[var(--ink)] uppercase">Validated</span>
                                     <span class="text-[11px] text-[var(--ink-soft)]">{{ $val->date_generated?->format('M d, Y') }}</span>
                                 </div>
-                                <h4 class="text-sm font-bold mt-2">Prediction Class {{ $val->predicted_outcome }}</h4>
+                                <h4 class="text-sm font-bold mt-2">{{ $val->caregiverIndicatorLabel() }}</h4>
                                 <p class="text-[12px] text-[var(--ink-soft)] mt-1.5 leading-relaxed italic">
                                     "{{ $val->clinician_feedback ?? 'Clinical observation validated against current therapy progress targets.' }}"
                                 </p>
                                 <div class="pt-3 border-t border-[var(--line)] mt-4 flex items-center justify-between text-[11px] text-[var(--ink-soft)]">
-                                    <span>Confidence: {{ number_format($val->confidence_score * 100, 1) }}%</span>
+                                    <span>Model Score: {{ $val->confidence_score !== null ? number_format($val->confidence_score * 100, 1) . '%' : 'Uncalibrated' }}</span>
                                     <span class="font-semibold text-[var(--ink)]">Clinician Reviewed</span>
                                 </div>
                             </div>
