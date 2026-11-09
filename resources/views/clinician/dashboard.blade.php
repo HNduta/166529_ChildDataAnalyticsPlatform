@@ -30,7 +30,7 @@
         .navlink:hover{ background:#f3ede3; color:var(--ink); }
         .navlink.active{ background:var(--ink); color:#fff; }
 
-        button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+        button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -77,7 +77,7 @@
                 <div class="space-y-1">
                     <a href="#pending-reviews-section" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Predictions to Review ({{ $pendingPredictions->count() }})
+                        Pending Evaluations ({{ $pendingPredictions->count() }})
                     </a>
                     <a href="#recent-observations-section" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
@@ -184,14 +184,14 @@
                         Welcome, {{ $clinician->name }}
                     </h1>
                     <p class="text-sm text-[var(--ink-soft)] mt-1.5 leading-relaxed">
-                        Review caregiver behavioural observations, complete specialist ADOS-2 and cognitive assessment inputs, and validate exploratory developmental progress indicators for the children under your care.
+                        Review caregiver behavioural observations, complete standardized ADOS-2 and cognitive clinical assessments, and approve developmental progress summaries for the children under your care.
                     </p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
                     <a href="#pending-reviews-section" class="inline-flex items-center gap-2 bg-[var(--ink)] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Review Predictions ({{ $pendingPredictions->count() }})
+                        Review Progress Summaries ({{ $pendingPredictions->count() }})
                     </a>
                     <a href="#recent-observations-section" class="inline-flex items-center gap-2 border border-[var(--accent-soft)] bg-white text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
@@ -216,35 +216,35 @@
                     </p>
                 </div>
 
-                {{-- Card 2: Children Awaiting Assessment --}}
+                {{-- Card 2: Action Needed: Incomplete Assessments --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="eyebrow uppercase">Awaiting Assessment</span>
+                        <span class="eyebrow uppercase">Action Needed: Incomplete Assessments</span>
                         <div class="w-8 h-8 rounded-lg bg-[var(--accent-tint)] border border-[var(--accent-soft)] flex items-center justify-center text-[var(--accent)]">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                     </div>
                     <p class="text-3xl font-extrabold tracking-tight text-[var(--accent)]">{{ $awaitingAssessmentChildren->count() }}</p>
                     <p class="text-xs text-[var(--ink-soft)] mt-1">
-                        Assigned {{ Str::plural('child', $awaitingAssessmentChildren->count()) }} needing 14-feature specialist inputs
+                        Assigned {{ Str::plural('child', $awaitingAssessmentChildren->count()) }} needing standardized 14-domain clinical assessment
                     </p>
                 </div>
 
-                {{-- Card 3: Predictions Awaiting Clinician Review --}}
+                {{-- Card 3: Ready for Review --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="eyebrow uppercase">Pending Validation</span>
+                        <span class="eyebrow uppercase">Ready for Review</span>
                         <div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
                         </div>
                     </div>
                     <p class="text-3xl font-extrabold tracking-tight">{{ $pendingPredictions->count() }}</p>
                     <p class="text-xs text-[var(--ink-soft)] mt-1">
-                        Generated {{ Str::plural('prediction', $pendingPredictions->count()) }} awaiting clinician review
+                        Automated progress reports ready for your clinical review
                     </p>
                 </div>
 
-                {{-- Card 4: Validated Predictions --}}
+                {{-- Card 4: Validated Reviews --}}
                 <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
                     <div class="flex items-center justify-between mb-3">
                         <span class="eyebrow uppercase">Validated Reviews</span>
@@ -254,7 +254,7 @@
                     </div>
                     <p class="text-3xl font-extrabold tracking-tight text-emerald-700">{{ $validatedPredictions->count() }}</p>
                     <p class="text-xs text-[var(--ink-soft)] mt-1">
-                        Specialist-reviewed {{ Str::plural('indicator', $validatedPredictions->count()) }} across {{ $totalObservationsCount }} logged {{ Str::plural('observation', $totalObservationsCount) }}
+                        Clinician-approved {{ Str::plural('summary', $validatedPredictions->count()) }} across {{ $totalObservationsCount }} logged {{ Str::plural('observation', $totalObservationsCount) }}
                     </p>
                 </div>
             </section>
@@ -266,7 +266,7 @@
                         <p class="eyebrow uppercase mb-0.5">Caseload Management</p>
                         <h2 class="text-lg font-bold tracking-tight">Assigned Children ({{ $assignedChildren->count() }})</h2>
                         <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                            Locate assigned children, review their latest observations and developmental indicators, and open specialist assessments.
+                            Locate assigned children, review their latest observations and progress status, and open specialist assessments.
                         </p>
                     </div>
 
@@ -277,9 +277,9 @@
                             class="bg-[var(--canvas)] border border-[var(--line)] rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--ink)] focus:outline-none"
                         >
                             <option value="all">All Assigned Children</option>
-                            <option value="awaiting_assessment">Awaiting Specialist Assessment</option>
+                            <option value="awaiting_assessment">Action Needed: Incomplete Assessments</option>
                             <option value="needs_support">May Need Additional Support</option>
-                            <option value="on_track">On-Track Indicator</option>
+                            <option value="on_track">On-Track Status</option>
                         </select>
                     </div>
                 </div>
@@ -293,7 +293,7 @@
                                     <th class="py-2.5 px-2">Caregiver</th>
                                     <th class="py-2.5 px-2">Observations</th>
                                     <th class="py-2.5 px-2">Latest Assessment Status</th>
-                                    <th class="py-2.5 px-2">Latest Indicator</th>
+                                    <th class="py-2.5 px-2">Latest Progress Status</th>
                                     <th class="py-2.5 px-2 text-right">Clinical Actions</th>
                                 </tr>
                             </thead>
@@ -303,7 +303,7 @@
                                         $childPicUrl = $assignedChild->profilePictureUrl();
                                         $latestObs = $assignedChild->behaviouralRecords->first();
                                         $latestPred = $assignedChild->predictions->first();
-                                        $hasCompleteAssessment = $latestObs && is_array($latestObs->ml_assessment_inputs) && count($latestObs->ml_assessment_inputs) >= 14;
+                                        $hasCompleteAssessment = \App\Http\Controllers\ClinicianDashboardController::hasCompleteAssessment($latestObs);
                                         $indicatorStatusKey = $latestPred
                                             ? ((string) $latestPred->predicted_outcome === '1' ? 'needs_support' : 'on_track')
                                             : 'awaiting_assessment';
@@ -354,12 +354,13 @@
                                         <td class="py-3.5 px-2">
                                             @if ($hasCompleteAssessment)
                                                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                    14 Inputs Recorded
+                                                    <span>✓</span>
+                                                    14-Domain Assessment Complete
                                                 </span>
                                             @elseif ($latestObs)
                                                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                                                    Awaiting Specialist Inputs
+                                                    <span>⏳</span>
+                                                    Incomplete Assessment
                                                 </span>
                                             @else
                                                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-soft)] bg-[var(--canvas)] border border-[var(--line)] px-2.5 py-0.5 rounded-full">
@@ -375,11 +376,11 @@
                                                         {{ $latestPred->caregiverIndicatorLabel() }}
                                                     </span>
                                                     <p class="text-[11px] text-[var(--ink-soft)]">
-                                                        {{ $latestPred->validated_by_clinician ? 'Validated by Clinician' : 'Awaiting Review' }}
+                                                        {{ $latestPred->validated_by_clinician ? '✓ Verified by Clinician' : '⏳ Pending Review' }}
                                                     </p>
                                                 </div>
                                             @else
-                                                <span class="text-xs text-[var(--ink-soft)]">Not generated yet</span>
+                                                <span class="text-xs text-[var(--ink-soft)]">Pending evaluation</span>
                                             @endif
                                         </td>
 
@@ -397,7 +398,7 @@
                                                         href="{{ route('clinician.assessments.edit', $latestObs) }}"
                                                         class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition"
                                                     >
-                                                        {{ $hasCompleteAssessment ? 'Update Assessment' : 'Complete Assessment' }}
+                                                        {{ $hasCompleteAssessment ? 'Edit Assessment' : 'Start Assessment' }}
                                                     </a>
                                                 @endif
                                             </div>
@@ -414,7 +415,7 @@
                         </div>
                         <p class="text-sm font-bold">No children assigned to your caseload yet</p>
                         <p class="text-xs text-[var(--ink-soft)] mt-1 max-w-md mx-auto">
-                            Once child profiles are linked to your clinician account, their behavioural observations, specialist assessments, and predictions will appear here automatically.
+                            Once child profiles are linked to your clinician account, their behavioural observations, specialist assessments, and progress summaries will appear here automatically.
                         </p>
                     </div>
                 @endif
@@ -423,22 +424,51 @@
             {{-- ===================== TWO-COLUMN CLINICAL WORKFLOW ===================== --}}
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-                {{-- LEFT: PREDICTIONS AWAITING CLINICIAN VALIDATION --}}
+                {{-- LEFT: EVALUATIONS PENDING REVIEW (WITH PATIENT & PRIORITY/DATE FILTERS) --}}
                 <section id="pending-reviews-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
-                    <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                         <div>
                             <p class="eyebrow uppercase mb-0.5">Clinical Validation Queue</p>
-                            <h2 class="text-lg font-bold tracking-tight">Predictions Awaiting Review ({{ $pendingPredictions->count() }})</h2>
+                            <h2 class="text-lg font-bold tracking-tight">Evaluations Pending Review ({{ $pendingPredictions->count() }})</h2>
                             <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                                Validate generated indicators and record plain-language feedback for the caregiver.
+                                Approve progress summaries and send clinical guidance to the caregiver.
                             </p>
                         </div>
+
+                        @if ($pendingPredictions->isNotEmpty())
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <select
+                                    id="pending-patient-filter"
+                                    onchange="filterAndSortPendingReviews()"
+                                    class="bg-[var(--canvas)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] focus:outline-none"
+                                >
+                                    <option value="all">Filter by Patient: All</option>
+                                    @foreach ($assignedChildren as $pat)
+                                        <option value="{{ $pat->id }}">{{ $pat->first_name }}</option>
+                                    @endforeach
+                                </select>
+
+                                <select
+                                    id="pending-sort-select"
+                                    onchange="filterAndSortPendingReviews()"
+                                    class="bg-[var(--canvas)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] focus:outline-none"
+                                >
+                                    <option value="newest">Sort by Date (Newest First)</option>
+                                    <option value="priority">Sort by Priority (Needs Support First)</option>
+                                </select>
+                            </div>
+                        @endif
                     </div>
 
                     @if ($pendingPredictions->isNotEmpty())
-                        <div class="space-y-4">
+                        <div id="pending-reviews-list" class="space-y-4">
                             @foreach ($pendingPredictions as $pendingPred)
-                                <div class="border border-[var(--line)] rounded-xl p-4 bg-[var(--canvas)]/50 space-y-3">
+                                <div
+                                    class="pending-review-card border border-[var(--line)] rounded-xl p-4 bg-[var(--canvas)]/50 space-y-3"
+                                    data-child-id="{{ $pendingPred->child_id }}"
+                                    data-timestamp="{{ $pendingPred->date_generated?->timestamp ?? $pendingPred->id }}"
+                                    data-priority="{{ (string) $pendingPred->predicted_outcome === '1' ? '1' : '0' }}"
+                                >
                                     <div class="flex flex-wrap items-start justify-between gap-2">
                                         <div class="flex items-center gap-2.5">
                                             @php
@@ -456,7 +486,7 @@
                                                 <p class="text-[11px] text-[var(--ink-soft)]">
                                                     Generated {{ $pendingPred->date_generated?->format('M d, Y') ?? 'Recently' }}
                                                     @if ($pendingPred->confidence_score !== null)
-                                                        · Model score: {{ number_format((float) $pendingPred->confidence_score * 100, 1) }}%
+                                                        · Calculated Progress Score: {{ number_format((float) $pendingPred->confidence_score * 100, 1) }}%
                                                     @endif
                                                 </p>
                                             </div>
@@ -468,7 +498,7 @@
                                     </div>
 
                                     <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
-                                        {{ $pendingPred->caregiverIndicatorDescription() }}
+                                        {{ $pendingPred->clinicalProgressSummaryDescription() }}
                                     </p>
 
                                     <form method="POST" action="{{ route('clinician.predictions.validate', $pendingPred) }}" class="space-y-3 pt-2 border-t border-[var(--line)]">
@@ -483,16 +513,16 @@
                                             <textarea
                                                 id="feedback-{{ $pendingPred->id }}"
                                                 name="clinician_feedback"
-                                                rows="2"
+                                                rows="4"
                                                 placeholder="Add supportive clinical notes or adjustments for the caregiver..."
-                                                class="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                                                class="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none resize-y"
                                             >{{ old('clinician_feedback', $pendingPred->clinician_feedback) }}</textarea>
                                         </div>
 
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             @if ($pendingPred->observation)
                                                 <a href="{{ route('clinician.assessments.edit', $pendingPred->observation) }}" class="text-xs font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] hover:underline">
-                                                    Inspect Assessment Inputs →
+                                                    Review Observation Details →
                                                 </a>
                                             @else
                                                 <span></span>
@@ -500,7 +530,7 @@
 
                                             <button type="submit" class="inline-flex items-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-3.5 py-2 rounded-lg hover:opacity-90 transition">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                                                Validate Indicator &amp; Save Feedback
+                                                Approve Summary &amp; Send Feedback to Caregiver
                                             </button>
                                         </div>
                                     </form>
@@ -512,9 +542,9 @@
                             <div class="w-10 h-10 mx-auto rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 mb-2.5">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
                             </div>
-                            <p class="text-sm font-semibold">All generated predictions are reviewed</p>
+                            <p class="text-sm font-semibold">All progress summaries are reviewed</p>
                             <p class="text-xs text-[var(--ink-soft)] mt-1">
-                                New predictions requiring specialist validation will appear here automatically.
+                                New automated progress reports requiring specialist review will appear here automatically.
                             </p>
                         </div>
                     @endif
@@ -527,7 +557,7 @@
                             <p class="eyebrow uppercase mb-0.5">Observation &amp; Assessment Feed</p>
                             <h2 class="text-lg font-bold tracking-tight">Recent Behavioural Observations</h2>
                             <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                                Caregiver session logs for your assigned children. Open any observation to enter or update specialist assessment scores.
+                                Caregiver session logs for your assigned children. Open any session to start or edit its 14-domain clinical assessment.
                             </p>
                         </div>
                     </div>
@@ -537,7 +567,7 @@
                             @foreach ($recentObservations->take(6) as $obs)
                                 @php
                                     $obsChildPic = $obs->child?->profilePictureUrl();
-                                    $obsInputsComplete = is_array($obs->ml_assessment_inputs) && count($obs->ml_assessment_inputs) >= 14;
+                                    $obsInputsComplete = \App\Http\Controllers\ClinicianDashboardController::hasCompleteAssessment($obs);
                                 @endphp
                                 <div class="border border-[var(--line)] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:border-[var(--ink)] transition">
                                     <div class="flex items-start gap-3">
@@ -552,9 +582,17 @@
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <p class="text-sm font-bold">{{ $obs->child->first_name ?? 'Child' }}</p>
                                                 <span class="text-xs text-[var(--ink-soft)]">· {{ $obs->observation_date?->format('M d, Y') }}</span>
-                                                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $obsInputsComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
-                                                    {{ $obsInputsComplete ? 'Assessment Saved' : 'Needs Assessment' }}
-                                                </span>
+                                                @if ($obsInputsComplete)
+                                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        <span>✓</span>
+                                                        14-Domain Assessment Complete
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                                        <span>⏳</span>
+                                                        Incomplete Assessment
+                                                    </span>
+                                                @endif
                                             </div>
                                             <p class="text-xs text-[var(--ink-soft)] mt-1">
                                                 Comm: {{ $obs->communication_score }}/10 · Social: {{ $obs->social_interaction_score }}/10 · Engagement: {{ $obs->engagement_level }}/10 · Success: {{ number_format((float) $obs->success_rate, 0) }}%
@@ -572,7 +610,7 @@
                                             href="{{ route('clinician.assessments.edit', $obs) }}"
                                             class="inline-flex items-center gap-1.5 border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)] text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[var(--ink)] hover:text-white transition"
                                         >
-                                            {{ $obsInputsComplete ? 'Edit Assessment' : 'Enter Assessment' }}
+                                            {{ $obsInputsComplete ? 'Edit Assessment' : 'Start Assessment' }}
                                         </a>
                                     </div>
                                 </div>
@@ -590,13 +628,13 @@
 
             </div>
 
-            {{-- ===================== VALIDATED PREDICTIONS & FEEDBACK HISTORY ===================== --}}
+            {{-- ===================== VALIDATED PROGRESS SUMMARIES & FEEDBACK HISTORY ===================== --}}
             <section id="validated-history-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
                 <div class="mb-4">
                     <p class="eyebrow uppercase mb-0.5">Completed Clinical Reviews</p>
-                    <h2 class="text-lg font-bold tracking-tight">Recently Validated Developmental Indicators ({{ $validatedPredictions->count() }})</h2>
+                    <h2 class="text-lg font-bold tracking-tight">Recently Approved Progress Summaries ({{ $validatedPredictions->count() }})</h2>
                     <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                        History of clinician-validated indicators and specialist feedback shared with caregivers.
+                        History of clinician-verified progress summaries and specialist feedback shared with caregivers.
                     </p>
                 </div>
 
@@ -612,7 +650,10 @@
                                         </span>
                                     </div>
                                     <p class="text-xs text-[var(--ink-soft)]">
-                                        Validated · Generated {{ $valPred->date_generated?->format('M d, Y') ?? 'Recently' }}
+                                        ✓ Verified · Generated {{ $valPred->date_generated?->format('M d, Y') ?? 'Recently' }}
+                                        @if ($valPred->confidence_score !== null)
+                                            · Calculated Progress Score: {{ number_format((float) $valPred->confidence_score * 100, 1) }}%
+                                        @endif
                                     </p>
                                     @if ($valPred->clinician_feedback)
                                         <div class="mt-3 p-3 rounded-lg bg-[var(--canvas)] border border-[var(--line)] text-xs text-[var(--ink)]">
@@ -626,7 +667,7 @@
                     </div>
                 @else
                     <p class="text-xs text-[var(--ink-soft)] italic">
-                        No predictions have been marked as validated yet. Use the Clinical Validation Queue above to validate pending indicators.
+                        No progress summaries have been marked as verified yet. Use the Clinical Validation Queue above to approve pending summaries.
                     </p>
                 @endif
             </section>
@@ -652,6 +693,33 @@
             } else {
                 row.classList.add('hidden');
             }
+        });
+    }
+
+    function filterAndSortPendingReviews() {
+        const container = document.getElementById('pending-reviews-list');
+        if (!container) return;
+
+        const patientFilter = document.getElementById('pending-patient-filter')?.value || 'all';
+        const sortBy = document.getElementById('pending-sort-select')?.value || 'newest';
+        const cards = Array.from(container.querySelectorAll('.pending-review-card'));
+
+        cards.forEach(function (card) {
+            const childId = card.getAttribute('data-child-id');
+            const show = patientFilter === 'all' || String(childId) === String(patientFilter);
+            card.classList.toggle('hidden', !show);
+        });
+
+        cards.sort(function (a, b) {
+            if (sortBy === 'priority') {
+                const prioDiff = Number(b.getAttribute('data-priority') || 0) - Number(a.getAttribute('data-priority') || 0);
+                if (prioDiff !== 0) return prioDiff;
+            }
+            return Number(b.getAttribute('data-timestamp') || 0) - Number(a.getAttribute('data-timestamp') || 0);
+        });
+
+        cards.forEach(function (card) {
+            container.appendChild(card);
         });
     }
 </script>

@@ -73,6 +73,19 @@ class Prediction extends Model
     }
 
     /**
+     * Return a clinical decision-support summary description for clinicians,
+     * keeping essential clinical guidance without developer/ML jargon.
+     */
+    public function clinicalProgressSummaryDescription(): string
+    {
+        return match ((string) $this->predicted_outcome) {
+            '0' => 'Caregiver behavioural observations and standardized ADOS-2, cognitive, and adaptive composite scores indicate steady developmental progress across active intervention domains. Requires verification and sign-off by a qualified clinician.',
+            '1' => 'Caregiver behavioural observations and standardized ADOS-2, cognitive, and adaptive composite scores indicate potential plateauing or a need for targeted clinical and home intervention adjustments. Requires verification and sign-off by a qualified clinician.',
+            default => 'A clinical progress summary will be available once all standardized specialist assessment domains are recorded.',
+        };
+    }
+
+    /**
      * Generate and store transparent, non-diagnostic support recommendations
      * mapped from this prediction outcome and assessment context using
      * simple, caregiver-friendly language.

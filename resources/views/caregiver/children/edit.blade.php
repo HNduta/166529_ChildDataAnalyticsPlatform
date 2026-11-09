@@ -287,7 +287,7 @@
                             </div>
 
                             {{-- Diagnosis --}}
-                            <div>
+                            <div class="mb-5">
                                 <label for="diagnosis_confirmed" class="field-label">Has the child's ASD diagnosis been confirmed?</label>
                                 <div class="relative">
                                     <svg class="w-4 h-4 field-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
@@ -296,6 +296,23 @@
                                         <option value="1" {{ (string) old('diagnosis_confirmed', $child->diagnosis_confirmed ? '1' : '0') === '1' ? 'selected' : '' }}>Yes</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            {{-- Assigned Clinician --}}
+                            <div>
+                                <label for="clinician_id" class="field-label">Assigned Specialist Clinician</label>
+                                <div class="relative">
+                                    <svg class="w-4 h-4 field-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6M17 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                                    <select id="clinician_id" name="clinician_id" class="field-input">
+                                        <option value="">No clinician assigned</option>
+                                        @foreach (($availableClinicians ?? collect()) as $clinicianOption)
+                                            <option value="{{ $clinicianOption->id }}" {{ (string) old('clinician_id', $selectedClinicianId ?? '') === (string) $clinicianOption->id ? 'selected' : '' }}>
+                                                {{ $clinicianOption->name }} ({{ $clinicianOption->email }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <p class="mt-1.5 text-xs text-[var(--ink-soft)]">Select or update the clinician assigned to {{ $child->first_name }}.</p>
                             </div>
                         </div>
 

@@ -38,6 +38,33 @@
     $clinician = $clinician ?? auth()->user();
     $clinicianAvatarUrl = $clinician?->profilePictureUrl();
     $childAvatarUrl = $child->profilePictureUrl();
+
+    // Helper closures for clinical domain score labels & severity/ability bars
+    $abilityDescriptor = function (float $score): array {
+        if ($score >= 7.0) {
+            return ['label' => 'Strong Ability', 'bar' => 'bg-emerald-500', 'badge' => 'text-emerald-700 bg-emerald-50 border-emerald-200'];
+        }
+        if ($score >= 4.0) {
+            return ['label' => 'Moderate / Developing', 'bar' => 'bg-amber-500', 'badge' => 'text-amber-800 bg-amber-50 border-amber-200'];
+        }
+        return ['label' => 'Needs Support', 'bar' => 'bg-[var(--accent)]', 'badge' => 'text-[var(--accent)] bg-[var(--accent-tint)] border-[var(--accent-soft)]'];
+    };
+
+    $repetitiveSeverityDescriptor = function (float $score): array {
+        // For Repetitive Behaviour, lower score = milder severity; higher score = higher severity
+        if ($score <= 3.5) {
+            return ['label' => 'Mild Severity', 'bar' => 'bg-emerald-500', 'badge' => 'text-emerald-700 bg-emerald-50 border-emerald-200'];
+        }
+        if ($score <= 6.5) {
+            return ['label' => 'Moderate Concern', 'bar' => 'bg-amber-500', 'badge' => 'text-amber-800 bg-amber-50 border-amber-200'];
+        }
+        return ['label' => 'Elevated Severity', 'bar' => 'bg-[var(--accent)]', 'badge' => 'text-[var(--accent)] bg-[var(--accent-tint)] border-[var(--accent-soft)]'];
+    };
+
+    $commInfo = $abilityDescriptor((float) ($domainAverages['communication'] ?? 0));
+    $socialInfo = $abilityDescriptor((float) ($domainAverages['social'] ?? 0));
+    $engageInfo = $abilityDescriptor((float) ($domainAverages['engagement'] ?? 0));
+    $repInfo = $repetitiveSeverityDescriptor((float) ($domainAverages['repetitive'] ?? 0));
 @endphp
 
 <div class="flex min-h-screen">
@@ -76,7 +103,7 @@
                     </a>
                     <a href="#longitudinal-scores-section" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19V6"/><path d="M10 19V10"/><path d="M16 19V4"/><path d="M22 19V13"/></svg>
-                        Behavioural Trends ({{ $observations->count() }})
+                        Caregiver Logs &amp; History ({{ $observations->count() }})
                     </a>
                     <a href="#caregiver-recommendations-section" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
@@ -203,20 +230,54 @@
                         </div>
 
                         <p class="text-xs text-[var(--ink-soft)] mt-2 max-w-2xl leading-relaxed">
-                            Monitor longitudinal behavioural domains, configure SMART therapy goals and developmental milestones, and review caregiver home recommendations.
+                            Review caregiver behavioural logs, record standardized clinical assessments, manage SMART therapy goals and milestones, and approve home support guidance.
                         </p>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
                     @if ($latestObservation)
-                        <a
-                            href="{{ route('clinician.assessments.edit', $latestObservation) }}"
-                            class="inline-flex items-center gap-2 border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[#efe7dc] transition"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
-                            {{ $hasCompleteAssessment ? 'Edit 14-Feature Assessment' : 'Complete 14-Feature Assessment' }}
-                        </a>
+                        {{-- 14-Feature Assessment Button + Contextual Info Popover --}}
+                        <div class="relative inline-flex items-center gap-1.5">
+                            <a
+                                href="{{ route('clinician.assessments.edit', $latestObservation) }}"
+                                class="inline-flex items-center gap-2 border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[#efe7dc] transition"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M9 12h6M9 16h6"/></svg>
+                                {{ $hasCompleteAssessment ? 'Edit Assessment' : 'Start Assessment' }}
+                            </a>
+
+                            <button
+                                type="button"
+                                onclick="toggleAssessmentDomainsTooltip()"
+                                aria-label="View 14-Feature Clinical Assessment Domains"
+                                title="What is included in the 14-Feature Clinical Assessment?"
+                                class="w-8 h-8 rounded-full border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--canvas)] flex items-center justify-center text-xs font-extrabold transition shadow-sm"
+                            >
+                                i
+                            </button>
+
+                            {{-- Contextual Popover Checklist of the 14 Clinical Features --}}
+                            <div
+                                id="assessment-domains-tooltip"
+                                class="hidden absolute right-0 top-12 z-30 w-80 sm:w-96 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-xl text-left"
+                            >
+                                <div class="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-[var(--line)]">
+                                    <div>
+                                        <p class="text-xs font-extrabold text-[var(--ink)]">14-Feature Clinical Assessment Checklist</p>
+                                        <p class="text-[11px] text-[var(--ink-soft)]">Standardized clinical &amp; developmental domains evaluated:</p>
+                                    </div>
+                                    <button type="button" onclick="toggleAssessmentDomainsTooltip()" class="text-xs font-bold text-[var(--ink-soft)] hover:text-[var(--ink)] px-1">✕</button>
+                                </div>
+                                <ul class="text-[11px] text-[var(--ink-soft)] space-y-1.5 leading-relaxed">
+                                    <li><strong class="text-[var(--ink)]">1. ADOS-2 Diagnostic Scores (3):</strong> Social Affect (eye contact, joint attention, reciprocal interaction), Restricted &amp; Repetitive Behaviours (RRB), and Comparison Severity Category.</li>
+                                    <li><strong class="text-[var(--ink)]">2. Standardized Cognitive Profile (3):</strong> Verbal, Nonverbal, and General Conceptual Ability (GCA) percentiles.</li>
+                                    <li><strong class="text-[var(--ink)]">3. Adaptive Functioning (1):</strong> Adaptive Composite percentile (everyday independence &amp; self-care).</li>
+                                    <li><strong class="text-[var(--ink)]">4. Clinical &amp; Therapy Context (5):</strong> Primary Domain, Assessment Domain, DSM-5 Support Level, Active Therapy Services Count, and Early Session Task Success (%).</li>
+                                    <li><strong class="text-[var(--ink)]">5. Developmental Baseline (2):</strong> Child Age (years) and Sex/Gender category.</li>
+                                </ul>
+                            </div>
+                        </div>
 
                         @if ($hasCompleteAssessment)
                             <form method="POST" action="{{ route('behavioural-records.predict', $latestObservation) }}">
@@ -226,8 +287,8 @@
                                     type="submit"
                                     class="inline-flex items-center gap-2 bg-[var(--ink)] text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition"
                                 >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    {{ $latestPrediction ? 'Update Developmental Indicator' : 'Generate Developmental Indicator' }}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Calculate Clinical Progress Status
                                 </button>
                             </form>
                         @endif
@@ -238,102 +299,188 @@
             {{-- ===================== 4 SUMMARY KPI CARDS ===================== --}}
             <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {{-- Card 1: Logged Sessions & Avg Success --}}
-                <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
-                    <p class="eyebrow uppercase">Behavioural Sessions</p>
-                    <p class="text-3xl font-extrabold tracking-tight mt-2">{{ $observations->count() }}</p>
-                    <p class="text-xs text-[var(--ink-soft)] mt-1">
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <p class="eyebrow uppercase">Behavioural Sessions</p>
+                        <p class="text-3xl font-extrabold tracking-tight mt-2">{{ $observations->count() }}</p>
+                    </div>
+                    <p class="text-xs text-[var(--ink-soft)] mt-2">
                         Avg task completion: <strong>{{ number_format($domainAverages['success_rate'], 1) }}%</strong> ({{ $domainAverages['session_duration'] }} min avg)
                     </p>
                 </div>
 
-                {{-- Card 2: Domain Score Averages --}}
-                <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
-                    <p class="eyebrow uppercase">Longitudinal Domain Averages</p>
-                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-2.5 text-xs">
-                        <div>Comm: <strong class="text-[var(--ink)]">{{ $domainAverages['communication'] }}/10</strong></div>
-                        <div>Social: <strong class="text-[var(--ink)]">{{ $domainAverages['social'] }}/10</strong></div>
-                        <div>Engage: <strong class="text-[var(--ink)]">{{ $domainAverages['engagement'] }}/10</strong></div>
-                        <div>Repetitive: <strong class="text-[var(--accent)]">{{ $domainAverages['repetitive'] }}/10</strong></div>
+                {{-- Card 2: Overall Domain Summary (with color-coded bars & directionality labels) --}}
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <p class="eyebrow uppercase">Overall Domain Summary</p>
+                        <span class="text-[10px] font-semibold text-[var(--ink-soft)]">0–10 Scale</span>
+                    </div>
+
+                    {{-- Communication (Higher = Higher Ability) --}}
+                    <div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-[var(--ink)]">Comm: <strong>{{ $domainAverages['communication'] }}/10</strong></span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded border {{ $commInfo['badge'] }}">{{ $commInfo['label'] }}</span>
+                        </div>
+                        <div class="h-1.5 w-full rounded-full bg-[var(--canvas)] overflow-hidden mt-1">
+                            <div class="h-full {{ $commInfo['bar'] }} rounded-full" style="width: {{ min(100, round($domainAverages['communication'] * 10)) }}%;"></div>
+                        </div>
+                    </div>
+
+                    {{-- Social Interaction (Higher = Higher Ability) --}}
+                    <div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-[var(--ink)]">Social: <strong>{{ $domainAverages['social'] }}/10</strong></span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded border {{ $socialInfo['badge'] }}">{{ $socialInfo['label'] }}</span>
+                        </div>
+                        <div class="h-1.5 w-full rounded-full bg-[var(--canvas)] overflow-hidden mt-1">
+                            <div class="h-full {{ $socialInfo['bar'] }} rounded-full" style="width: {{ min(100, round($domainAverages['social'] * 10)) }}%;"></div>
+                        </div>
+                    </div>
+
+                    {{-- Engagement (Higher = Higher Ability) --}}
+                    <div>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-[var(--ink)]">Engage: <strong>{{ $domainAverages['engagement'] }}/10</strong></span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded border {{ $engageInfo['badge'] }}">{{ $engageInfo['label'] }}</span>
+                        </div>
+                        <div class="h-1.5 w-full rounded-full bg-[var(--canvas)] overflow-hidden mt-1">
+                            <div class="h-full {{ $engageInfo['bar'] }} rounded-full" style="width: {{ min(100, round($domainAverages['engagement'] * 10)) }}%;"></div>
+                        </div>
+                    </div>
+
+                    {{-- Repetitive Behaviour (Higher = Higher Severity; Lower = Milder Severity) --}}
+                    <div class="pt-1 border-t border-[var(--line)]">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-semibold text-[var(--ink)]">Repetitive: <strong>{{ $domainAverages['repetitive'] }}/10</strong></span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded border {{ $repInfo['badge'] }}">{{ $repInfo['label'] }}</span>
+                        </div>
+                        <div class="h-1.5 w-full rounded-full bg-[var(--canvas)] overflow-hidden mt-1">
+                            <div class="h-full {{ $repInfo['bar'] }} rounded-full" style="width: {{ min(100, round($domainAverages['repetitive'] * 10)) }}%;"></div>
+                        </div>
+                        <p class="text-[10px] text-[var(--ink-soft)] mt-1">
+                            <em>Note:</em> Higher Comm/Social/Engage = stronger ability; lower Repetitive = milder severity.
+                        </p>
                     </div>
                 </div>
 
                 {{-- Card 3: Therapy Goals & Milestones --}}
-                <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
-                    <p class="eyebrow uppercase">Therapy Goals &amp; Milestones</p>
-                    <p class="text-3xl font-extrabold tracking-tight mt-2">
-                        {{ $activeGoalsCount }} <span class="text-sm font-semibold text-[var(--ink-soft)]">active</span>
-                    </p>
-                    <p class="text-xs text-[var(--ink-soft)] mt-1">
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <p class="eyebrow uppercase">Therapy Goals &amp; Milestones</p>
+                        <p class="text-3xl font-extrabold tracking-tight mt-2">
+                            {{ $activeGoalsCount }} <span class="text-sm font-semibold text-[var(--ink-soft)]">active</span>
+                        </p>
+                    </div>
+                    <p class="text-xs text-[var(--ink-soft)] mt-2">
                         <strong>{{ $achievedMilestonesCount }}/{{ $totalMilestonesCount }}</strong> milestones achieved · {{ $completedGoalsCount }} {{ Str::plural('goal', $completedGoalsCount) }} completed
                     </p>
                 </div>
 
-                {{-- Card 4: Latest Developmental Indicator --}}
-                <div class="bg-white border border-[var(--line)] rounded-2xl p-5">
-                    <p class="eyebrow uppercase">Developmental Indicator</p>
+                {{-- Card 4: Clinical Progress Status --}}
+                <div class="bg-white border border-[var(--line)] rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <p class="eyebrow uppercase">Clinical Progress Status</p>
+                        @if ($latestPrediction)
+                            <div class="mt-2">
+                                <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full {{ (string) $latestPrediction->predicted_outcome === '1' ? 'bg-[var(--accent-tint)] text-[var(--accent)] border border-[var(--accent-soft)]' : 'bg-emerald-50 text-emerald-800 border border-emerald-200' }}">
+                                    {{ $latestPrediction->caregiverIndicatorLabel() }}
+                                </span>
+                            </div>
+                        @else
+                            <p class="text-lg font-bold text-[var(--ink-soft)] mt-2">Pending Assessment</p>
+                        @endif
+                    </div>
                     @if ($latestPrediction)
-                        <div class="mt-2">
-                            <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full {{ (string) $latestPrediction->predicted_outcome === '1' ? 'bg-[var(--accent-tint)] text-[var(--accent)] border border-[var(--accent-soft)]' : 'bg-emerald-50 text-emerald-800 border border-emerald-200' }}">
-                                {{ $latestPrediction->caregiverIndicatorLabel() }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-[var(--ink-soft)] mt-1.5">
-                            {{ $latestPrediction->validated_by_clinician ? 'Validated by Clinician' : 'Awaiting Clinician Sign-Off' }}
+                        <p class="text-xs text-[var(--ink-soft)] mt-2">
+                            {{ $latestPrediction->validated_by_clinician ? '✓ Verified by Clinician' : '⏳ Pending Clinician Verification' }}
                             @if ($latestPrediction->confidence_score !== null)
-                                · Score: {{ number_format((float) $latestPrediction->confidence_score * 100, 1) }}%
+                                · Calculated Progress Score: {{ number_format((float) $latestPrediction->confidence_score * 100, 1) }}%
                             @endif
                         </p>
                     @else
-                        <p class="text-lg font-bold text-[var(--ink-soft)] mt-2">Not Generated Yet</p>
-                        <p class="text-xs text-[var(--ink-soft)] mt-1">
-                            Complete 14-feature specialist assessment to generate indicator.
+                        <p class="text-xs text-[var(--ink-soft)] mt-2">
+                            Complete the standardized assessment to calculate clinical progress status.
                         </p>
                     @endif
                 </div>
             </section>
 
-            {{-- ===================== LATEST INDICATOR VALIDATION BANNER ===================== --}}
+            {{-- ===================== AI-ASSISTED PROGRESS SUMMARY & CLINICAL FEEDBACK PANEL ===================== --}}
             @if ($latestPrediction)
                 <section class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
-                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                        <div class="max-w-2xl space-y-2">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <div class="lg:col-span-5 space-y-2.5">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="eyebrow uppercase">Decision-Support Indicator Review</span>
+                                <span class="eyebrow uppercase">
+                                    {{ $latestPrediction->validated_by_clinician ? 'AI-Assisted Progress Summary (Verified)' : 'AI-Assisted Progress Summary (Pending Verification)' }}
+                                </span>
                                 <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full {{ $latestPrediction->validated_by_clinician ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
-                                    {{ $latestPrediction->validated_by_clinician ? 'Validated by Clinician' : 'Pending Clinician Validation' }}
+                                    {{ $latestPrediction->validated_by_clinician ? 'Approved by Clinician' : 'Pending Verification' }}
                                 </span>
                             </div>
                             <h2 class="text-lg font-bold tracking-tight">
                                 {{ $latestPrediction->caregiverIndicatorLabel() }}
                             </h2>
                             <p class="text-xs text-[var(--ink-soft)] leading-relaxed">
-                                {{ $latestPrediction->caregiverIndicatorDescription() }}
+                                {{ $latestPrediction->clinicalProgressSummaryDescription() }}
                             </p>
                         </div>
 
-                        <form method="POST" action="{{ route('clinician.predictions.validate', $latestPrediction) }}" class="w-full lg:w-96 space-y-3 bg-[var(--canvas)]/60 border border-[var(--line)] rounded-xl p-4">
+                        <form method="POST" action="{{ route('clinician.predictions.validate', $latestPrediction) }}" class="lg:col-span-7 space-y-3 bg-[var(--canvas)]/60 border border-[var(--line)] rounded-xl p-4 sm:p-5">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="validated_by_clinician" value="1">
                             <input type="hidden" name="redirect_to" value="/clinician/children/{{ $child->id }}">
 
                             <div>
-                                <label for="child-clinician-feedback" class="block text-xs font-semibold mb-1">
-                                    Specialist Feedback &amp; Guidance for Caregiver
-                                </label>
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                                    <label for="child-clinician-feedback" class="block text-xs font-bold text-[var(--ink)]">
+                                        Specialist Feedback &amp; Guidance for Caregiver
+                                    </label>
+                                    <span class="text-[11px] text-[var(--ink-soft)]">Quick Clinical Note Templates:</span>
+                                </div>
+
+                                {{-- Quick Clinical Template Buttons --}}
+                                <div class="flex flex-wrap items-center gap-1.5 mb-2.5">
+                                    <button
+                                        type="button"
+                                        onclick="insertClinicalFeedbackTemplate('Continue daily 10-minute structured play and visual choice routines at home; reinforce all spontaneous communication attempts warmly.')"
+                                        class="text-[11px] font-semibold bg-white border border-[var(--line)] hover:border-[var(--ink)] text-[var(--ink)] px-2.5 py-1 rounded-lg transition"
+                                    >
+                                        + Insert Recommended Home Activity
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="insertClinicalFeedbackTemplate('Please log 2–3 home observation sessions this week focusing on transition routines so we can review progress at our next clinic appointment.')"
+                                        class="text-[11px] font-semibold bg-white border border-[var(--line)] hover:border-[var(--ink)] text-[var(--ink)] px-2.5 py-1 rounded-lg transition"
+                                    >
+                                        + Request Caregiver Follow-Up
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="insertClinicalFeedbackTemplate('Current developmental trajectory aligns well with active therapy goals. Maintain consistent visual schedules during daily self-care routines.')"
+                                        class="text-[11px] font-semibold bg-white border border-[var(--line)] hover:border-[var(--ink)] text-[var(--ink)] px-2.5 py-1 rounded-lg transition"
+                                    >
+                                        + Reinforce Current Routine
+                                    </button>
+                                </div>
+
                                 <textarea
                                     id="child-clinician-feedback"
                                     name="clinician_feedback"
-                                    rows="2"
-                                    placeholder="Record clinical notes or home support adjustments for {{ $child->first_name }}'s caregiver..."
-                                    class="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none"
+                                    rows="5"
+                                    placeholder="Record clinical interpretation, home routine adjustments, or follow-up guidance for {{ $child->first_name }}'s caregiver..."
+                                    class="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-xs text-[var(--ink)] placeholder:text-[var(--ink-soft)] focus:outline-none resize-y leading-relaxed"
                                 >{{ old('clinician_feedback', $latestPrediction->clinician_feedback) }}</textarea>
                             </div>
 
-                            <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                                {{ $latestPrediction->validated_by_clinician ? 'Update Validation & Feedback' : 'Validate Indicator & Share Feedback' }}
-                            </button>
+                            <div class="flex justify-end">
+                                <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-[var(--ink)] text-white text-xs font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                    Approve Summary &amp; Send Feedback to Caregiver
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </section>
@@ -546,11 +693,11 @@
                 @endif
             </section>
 
-            {{-- ===================== LONGITUDINAL BEHAVIOURAL SCORES & TRENDS ===================== --}}
+            {{-- ===================== CAREGIVER LOGS & SESSION HISTORY ===================== --}}
             <section id="longitudinal-scores-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6 space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <p class="eyebrow uppercase mb-0.5">Longitudinal Behavioural Analytics</p>
+                        <p class="eyebrow uppercase mb-0.5">Caregiver Logs &amp; Session History</p>
                         <h2 class="text-lg font-bold tracking-tight">Behavioural Observation History ({{ $observations->count() }})</h2>
                         <p class="text-xs text-[var(--ink-soft)] mt-0.5">
                             Session-by-session caregiver ratings across Communication, Social Interaction, Engagement, Repetitive Behaviour, and Task Completion.
@@ -570,13 +717,14 @@
                                     <th class="py-2.5 px-2">Repetitive (0–10)</th>
                                     <th class="py-2.5 px-2">Success Rate</th>
                                     <th class="py-2.5 px-2">Caregiver Notes</th>
-                                    <th class="py-2.5 px-2 text-right">Assessment &amp; Indicator</th>
+                                    <th class="py-2.5 px-2 text-right">Clinical Evaluation</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[var(--line)]">
                                 @foreach ($observations as $obs)
                                     @php
                                         $obsComplete = \App\Http\Controllers\ClinicianDashboardController::hasCompleteAssessment($obs);
+                                        $obsRepInfo = $repetitiveSeverityDescriptor((float) $obs->repetitive_behaviour_score);
                                     @endphp
                                     <tr class="hover:bg-[var(--canvas)]/50 transition">
                                         <td class="py-3 px-2 font-semibold text-xs whitespace-nowrap">
@@ -586,7 +734,10 @@
                                         <td class="py-3 px-2 text-xs font-bold">{{ $obs->communication_score }}/10</td>
                                         <td class="py-3 px-2 text-xs font-bold">{{ $obs->social_interaction_score }}/10</td>
                                         <td class="py-3 px-2 text-xs font-bold">{{ $obs->engagement_level }}/10</td>
-                                        <td class="py-3 px-2 text-xs font-bold text-[var(--accent)]">{{ $obs->repetitive_behaviour_score }}/10</td>
+                                        <td class="py-3 px-2 text-xs">
+                                            <span class="font-bold text-[var(--accent)]">{{ $obs->repetitive_behaviour_score }}/10</span>
+                                            <span class="block text-[10px] text-[var(--ink-soft)]">{{ $obsRepInfo['label'] }}</span>
+                                        </td>
                                         <td class="py-3 px-2 text-xs font-semibold">{{ number_format((float) $obs->success_rate, 0) }}%</td>
                                         <td class="py-3 px-2 text-xs text-[var(--ink-soft)] max-w-xs">
                                             {{ $obs->notes ?: '—' }}
@@ -597,7 +748,7 @@
                                                     href="{{ route('clinician.assessments.edit', $obs) }}"
                                                     class="inline-flex items-center gap-1 border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)] text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:bg-[var(--ink)] hover:text-white transition"
                                                 >
-                                                    {{ $obsComplete ? 'Edit 14 Inputs' : 'Enter 14 Inputs' }}
+                                                    {{ $obsComplete ? 'Edit Assessment' : 'Start Assessment' }}
                                                 </a>
 
                                                 @if ($obsComplete)
@@ -608,7 +759,7 @@
                                                             type="submit"
                                                             class="inline-flex items-center gap-1 bg-[var(--ink)] text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:opacity-90 transition"
                                                         >
-                                                            Run Indicator
+                                                            Calculate Clinical Progress Status
                                                         </button>
                                                     </form>
                                                 @endif
@@ -635,7 +786,7 @@
                     <p class="eyebrow uppercase mb-0.5">Home-to-Clinic Continuity</p>
                     <h2 class="text-lg font-bold tracking-tight">Caregiver Home Support Recommendations ({{ $child->recommendations->count() }})</h2>
                     <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                        Non-diagnostic everyday support activities generated for {{ $child->first_name }}'s caregiver and their home practice status.
+                        Everyday support activities shared with {{ $child->first_name }}'s caregiver and their home practice status.
                     </p>
                 </div>
 
@@ -674,7 +825,7 @@
                     <div class="border border-dashed border-[var(--line)] rounded-xl p-8 text-center">
                         <p class="text-sm font-semibold">No caregiver home recommendations generated yet</p>
                         <p class="text-xs text-[var(--ink-soft)] mt-1">
-                            Home activity guides are automatically generated when you run the Developmental Indicator for an observation.
+                            Home activity guides are automatically generated when you calculate the Clinical Progress Status for an observation.
                         </p>
                     </div>
                 @endif
@@ -683,5 +834,22 @@
         </main>
     </div>
 </div>
+
+<script>
+    function toggleAssessmentDomainsTooltip() {
+        const tooltip = document.getElementById('assessment-domains-tooltip');
+        if (tooltip) {
+            tooltip.classList.toggle('hidden');
+        }
+    }
+
+    function insertClinicalFeedbackTemplate(templateText) {
+        const textarea = document.getElementById('child-clinician-feedback');
+        if (!textarea) return;
+        const existing = textarea.value.trim();
+        textarea.value = existing ? (existing + ' ' + templateText) : templateText;
+        textarea.focus();
+    }
+</script>
 </body>
 </html>

@@ -124,4 +124,73 @@ class ChildPredictionService
 
         return $result;
     }
+
+    /**
+     * Check FastAPI service reachability (GET /health) and local model artifact status
+     * without exposing .env secrets or internal filesystem paths.
+     */
+    public function checkHealth(): array
+    {
+        $artifactPath = base_path('ml-service/models/child_intervention_pipeline.joblib');
+        $artifactExists = is_file($artifactPath);
+        $artifactSizeKb = $artifactExists ? round(filesize($artifactPath) / 1024, 1) : null;
+
+        $url = rtrim((string) config('services.child_prediction.url'), '/');
+
+        if ($url === '') {
+            return [
+                'reachable' => false,
+                'status_label' => 'Not Configured',
+                'model_loaded' => false,
+                'artifact_exists' => $artifactExists,
+                'artifact_name' => 'child_intervention_pipeline.joblib',
+                'artifact_size_kb' => $artifactSizeKb,
+                'summary' => 'Prediction service endpoint is not configured.',
+            ];
+        }
+
+        try {
+            $response = Http::acceptJson()
+                ->connectTimeout(2)
+                ->timeout(3)
+                ->get($url . '/health');
+
+            if ($response->successful()) {
+                $payload = $response->json();
+                $modelLoaded = is_array($payload) && !empty($payload['model_loaded']);
+
+                return [
+                    'reachable' => true,
+                    'status_label' => $modelLoaded ? 'Healthy · Online' : 'Online · Model Unloaded',
+                    'model_loaded' => $modelLoaded,
+                    'artifact_exists' => $artifactExists,
+                    'artifact_name' => 'child_intervention_pipeline.joblib',
+                    'artifact_size_kb' => $artifactSizeKb,
+                    'summary' => $modelLoaded
+                        ? 'FastAPI GET /health responded 200 OK with trained pipeline loaded.'
+                        : 'FastAPI service responded, but the model pipeline is not currently loaded.',
+                ];
+            }
+
+            return [
+                'reachable' => false,
+                'status_label' => 'Degraded (HTTP ' . $response->status() . ')',
+                'model_loaded' => false,
+                'artifact_exists' => $artifactExists,
+                'artifact_name' => 'child_intervention_pipeline.joblib',
+                'artifact_size_kb' => $artifactSizeKb,
+                'summary' => 'FastAPI service returned HTTP ' . $response->status() . ' on GET /health.',
+            ];
+        } catch (\Throwable) {
+            return [
+                'reachable' => false,
+                'status_label' => 'Offline / Unreachable',
+                'model_loaded' => false,
+                'artifact_exists' => $artifactExists,
+                'artifact_name' => 'child_intervention_pipeline.joblib',
+                'artifact_size_kb' => $artifactSizeKb,
+                'summary' => 'FastAPI prediction service is currently offline or unreachable on GET /health.',
+            ];
+        }
+    }
 }
