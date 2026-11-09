@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Child;
 use App\Models\Recommendation;
+use App\Models\User;
 use App\Services\ChildPredictionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
 
@@ -56,7 +58,12 @@ class ChildController extends Controller
      */
     public function create(): View
     {
-        return view('caregiver.children.create');
+        $availableClinicians = User::query()
+            ->where('role', 'clinician')
+            ->orderBy('name')
+            ->get();
+
+        return view('caregiver.children.create', compact('availableClinicians'));
     }
 
     /**
@@ -71,10 +78,16 @@ class ChildController extends Controller
             'born_with_jaundice' => ['nullable', 'boolean'],
             'family_member_with_asd' => ['nullable', 'boolean'],
             'diagnosis_confirmed' => ['nullable', 'boolean'],
+            'clinician_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'clinician')),
+            ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        unset($validated['profile_picture']);
+        $selectedClinicianId = $validated['clinician_id'] ?? null;
+        unset($validated['profile_picture'], $validated['clinician_id']);
 
         $validated['born_with_jaundice'] =
             $request->boolean('born_with_jaundice');
@@ -90,7 +103,11 @@ class ChildController extends Controller
         }
 
         // Assign ownership using the authenticated caregiver.
-        $request->user()->children()->create($validated);
+        $child = $request->user()->children()->create($validated);
+
+        if ($selectedClinicianId) {
+            $child->clinicians()->sync([(int) $selectedClinicianId]);
+        }
 
         return redirect()
             ->route('children.index')
@@ -485,9 +502,21 @@ class ChildController extends Controller
     {
         $child = $request->user()
             ->children()
+            ->with('clinicians')
             ->findOrFail($child->id);
 
-        return view('caregiver.children.edit', compact('child'));
+        $availableClinicians = User::query()
+            ->where('role', 'clinician')
+            ->orderBy('name')
+            ->get();
+
+        $selectedClinicianId = $child->clinicians->first()?->id;
+
+        return view('caregiver.children.edit', compact(
+            'child',
+            'availableClinicians',
+            'selectedClinicianId'
+        ));
     }
 
     /**
@@ -508,11 +537,18 @@ class ChildController extends Controller
             'born_with_jaundice' => ['nullable', 'boolean'],
             'family_member_with_asd' => ['nullable', 'boolean'],
             'diagnosis_confirmed' => ['nullable', 'boolean'],
+            'clinician_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', 'clinician')),
+            ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'remove_profile_picture' => ['nullable', 'boolean'],
         ]);
 
-        unset($validated['profile_picture'], $validated['remove_profile_picture']);
+        $hasClinicianSelection = $request->exists('clinician_id');
+        $selectedClinicianId = $validated['clinician_id'] ?? null;
+        unset($validated['profile_picture'], $validated['remove_profile_picture'], $validated['clinician_id']);
 
         $validated['born_with_jaundice'] =
             $request->boolean('born_with_jaundice');
@@ -536,6 +572,10 @@ class ChildController extends Controller
         }
 
         $child->update($validated);
+
+        if ($hasClinicianSelection) {
+            $child->clinicians()->sync($selectedClinicianId ? [(int) $selectedClinicianId] : []);
+        }
 
         return redirect()
             ->route('children.show', $child)

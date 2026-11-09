@@ -38,9 +38,31 @@ class AssessmentController extends Controller
             $behaviouralRecord
         );
 
+        $record = $behaviouralRecord->load('child');
+        $inputs = $record->ml_assessment_inputs ?? [];
+
+        if (!isset($inputs['avg_success_first_2']) || $inputs['avg_success_first_2'] === '') {
+            $firstTwo = $record->child->behaviouralRecords()
+                ->oldest('observation_date')
+                ->oldest('id')
+                ->take(2)
+                ->get();
+            if ($firstTwo->isNotEmpty()) {
+                $inputs['avg_success_first_2'] = round((float) $firstTwo->avg('success_rate'), 1);
+            }
+        }
+
+        if ((!isset($inputs['age_years']) || $inputs['age_years'] === '') && $record->child->age_in_months !== null) {
+            $inputs['age_years'] = round($record->child->age_in_months / 12, 1);
+        }
+
+        if ((!isset($inputs['gender']) || $inputs['gender'] === '') && !empty($record->child->sex)) {
+            $inputs['gender'] = ucfirst(strtolower((string) $record->child->sex));
+        }
+
         return view('assessments.edit', [
-            'record' => $behaviouralRecord->load('child'),
-            'inputs' => $behaviouralRecord->ml_assessment_inputs ?? [],
+            'record' => $record,
+            'inputs' => $inputs,
         ]);
     }
 

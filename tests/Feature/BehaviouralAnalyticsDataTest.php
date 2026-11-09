@@ -687,7 +687,13 @@ class BehaviouralAnalyticsDataTest extends TestCase
         $clinicianDash->assertStatus(200);
         $clinicianDash->assertSee('Welcome, Dr. Kamau', false);
         $clinicianDash->assertSee('Tunu', false);
-        $clinicianDash->assertSee('Predictions Awaiting Review (1)', false);
+        $clinicianDash->assertSee('Evaluations Pending Review (1)', false);
+        $clinicianDash->assertSee('Review Progress Summaries (1)', false);
+        $clinicianDash->assertSee('Action Needed: Incomplete Assessments', false);
+        $clinicianDash->assertSee('Ready for Review', false);
+        $clinicianDash->assertSee('Automated progress reports ready for your clinical review', false);
+        $clinicianDash->assertSee('Calculated Progress Score: 85.0%', false);
+        $clinicianDash->assertSee('Review Observation Details →', false);
 
         // Validate prediction from Clinician Dashboard
         $this->actingAs($clinician)
@@ -777,12 +783,19 @@ class BehaviouralAnalyticsDataTest extends TestCase
             ->get(route('clinician.children.show', $child))
             ->assertStatus(403);
 
-        // 2. Assigned clinician can view child monitoring page with longitudinal scores
+        // 2. Assigned clinician can view child monitoring page with longitudinal scores and humanized clinical terminology
         $showResponse = $this->actingAs($assignedClinician)
             ->get(route('clinician.children.show', $child));
         $showResponse->assertStatus(200);
         $showResponse->assertSee('Zuri · Clinical Monitoring', false);
         $showResponse->assertSee('Used picture cards during snack time.', false);
+        $showResponse->assertSee('Overall Domain Summary', false);
+        $showResponse->assertSee('Caregiver Logs &amp; Session History', false);
+        $showResponse->assertSee('14-Feature Clinical Assessment Checklist', false);
+        $showResponse->assertSee('Calculate Clinical Progress Status', false);
+        $showResponse->assertSee('Mild Severity', false);
+        $showResponse->assertDontSee('Run Indicator', false);
+        $showResponse->assertDontSee('Enter 14 Inputs', false);
 
         // 3. Assigned clinician can create a SMART Therapy Goal
         $this->actingAs($assignedClinician)
@@ -864,6 +877,117 @@ class BehaviouralAnalyticsDataTest extends TestCase
             'observation_id' => $observation->id,
             'predicted_outcome' => '0',
         ]);
+
+        // Verify AI-Assisted Progress Summary (Pending Verification) & quick template / button wording on show page
+        $showAfterPredict = $this->actingAs($assignedClinician)
+            ->get(route('clinician.children.show', $child));
+        $showAfterPredict->assertStatus(200);
+        $showAfterPredict->assertSee('AI-Assisted Progress Summary (Pending Verification)', false);
+        $showAfterPredict->assertSee('+ Insert Recommended Home Activity', false);
+        $showAfterPredict->assertSee('+ Request Caregiver Follow-Up', false);
+        $showAfterPredict->assertSee('Approve Summary &amp; Send Feedback to Caregiver', false);
+        $showAfterPredict->assertSee('Calculated Progress Score:', false);
+        $showAfterPredict->assertDontSee('exploratory indicator does not mean', false);
+
+        // Verify Specialist Clinical Assessment form renders clinical reference guide, Profile A/B auto-fill, and dropdowns
+        $assessPage = $this->actingAs($assignedClinician)
+            ->get(route('clinician.assessments.edit', $observation));
+        $assessPage->assertStatus(200);
+        $assessPage->assertSee('14-Domain Specialist Clinical Assessment Reference', false);
+        $assessPage->assertSee('Profile A (On-Track)', false);
+        $assessPage->assertSee('Profile B (Needs Support)', false);
+        $assessPage->assertSee('Sex / Gender', false);
+        $assessPage->assertSee('14-Domain Assessment Complete', false);
+    }
+
+    public function test_administrator_dashboard_live_metrics_service_health_and_caregiver_clinician_assignment(): void
+    {
+        $admin = User::factory()->create(['name' => 'Grace Admin', 'role' => 'administrator']);
+        $caregiver = User::factory()->create(['name' => 'Faith Caregiver', 'role' => 'caregiver']);
+        $clinicianA = User::factory()->create(['name' => 'Dr. Mutua', 'role' => 'clinician']);
+        $clinicianB = User::factory()->create(['name' => 'Dr. Achieng', 'role' => 'clinician']);
+
+        // 1. Caregiver can select an assigned clinician when creating a child profile
+        $this->actingAs($caregiver)
+            ->get(route('children.create'))
+            ->assertStatus(200)
+            ->assertSee('Assigned Specialist Clinician', false)
+            ->assertSee('Dr. Mutua', false);
+
+        $this->actingAs($caregiver)
+            ->post(route('children.store'), [
+                'first_name' => 'Baraka',
+                'age_in_months' => 45,
+                'sex' => 'Male',
+                'born_with_jaundice' => '0',
+                'family_member_with_asd' => '0',
+                'diagnosis_confirmed' => '1',
+                'clinician_id' => $clinicianA->id,
+            ])
+            ->assertRedirect(route('children.index'));
+
+        $child = Child::where('first_name', 'Baraka')->firstOrFail();
+        $this->assertTrue($child->clinicians()->where('users.id', $clinicianA->id)->exists());
+
+        // 2. Caregiver can update the assigned clinician on the Edit Child Profile page
+        $this->actingAs($caregiver)
+            ->get(route('children.edit', $child))
+            ->assertStatus(200)
+            ->assertSee('Assigned Specialist Clinician', false)
+            ->assertSee('Dr. Achieng', false);
+
+        $this->actingAs($caregiver)
+            ->put(route('children.update', $child), [
+                'first_name' => 'Baraka',
+                'age_in_months' => 46,
+                'sex' => 'Male',
+                'born_with_jaundice' => '0',
+                'family_member_with_asd' => '0',
+                'diagnosis_confirmed' => '1',
+                'clinician_id' => $clinicianB->id,
+            ])
+            ->assertRedirect(route('children.show', $child));
+
+        $this->assertFalse($child->clinicians()->where('users.id', $clinicianA->id)->exists());
+        $this->assertTrue($child->clinicians()->where('users.id', $clinicianB->id)->exists());
+
+        // 3. Administrator Dashboard displays live platform metrics, service health, and has no .skel placeholders
+        $obs = $child->behaviouralRecords()->create([
+            'caregiver_id' => $caregiver->id,
+            'observation_date' => '2026-11-05',
+            'communication_score' => 7,
+            'social_interaction_score' => 6,
+            'engagement_level' => 7,
+            'repetitive_behaviour_score' => 3,
+            'session_duration_minutes' => 30,
+            'success_rate' => 70.0,
+        ]);
+        $obs->predictions()->create([
+            'child_id' => $child->id,
+            'model_used' => 'child_intervention_pipeline',
+            'predicted_outcome' => '0',
+            'confidence_score' => 0.82,
+            'date_generated' => now(),
+            'validated_by_clinician' => true,
+        ]);
+
+        Http::fake([
+            '*/health' => Http::response([
+                'status' => 'healthy',
+                'model_loaded' => true,
+            ], 200),
+        ]);
+
+        $adminDash = $this->actingAs($admin)->get(route('administrator.dashboard'));
+        $adminDash->assertStatus(200);
+        $adminDash->assertSee('System Health &amp; Governance', false);
+        $adminDash->assertSee('System &amp; Service Health Panel', false);
+        $adminDash->assertSee('Healthy · Online', false);
+        $adminDash->assertSee('child_intervention_pipeline.joblib', false);
+        $adminDash->assertSee('Dr. Achieng', false);
+        $adminDash->assertSee('Faith Caregiver', false);
+        $adminDash->assertDontSee('class="skel"', false);
+        $adminDash->assertDontSee('/administrator/dashboard', false);
     }
 }
 
