@@ -1,0 +1,11 @@
+max_depth,min_samples_leaf,criterion,class_weight,ccp_alpha,CV_ROC_AUC,CV_PR_AUC,CV_F1,CV_Recall
+4,30,entropy,balanced,0.0,0.6053,0.2035,0.2469,0.5499
+5,20,gini,balanced,0.0,0.6006,0.1976,0.2808,0.5901
+4,20,gini,balanced,0.0,0.5972,0.1896,0.244,0.6255
+5,10,gini,balanced,0.0,0.596,0.1824,0.2767,0.6244
+5,20,gini,balanced,0.005,0.5954,0.1779,0.2737,0.5899
+4,15,gini,balanced,0.0,0.5829,0.1813,0.242,0.6046
+6,10,gini,balanced,0.0,0.5826,0.18,0.2677,0.5763
+6,20,gini,balanced,0.0,0.5816,0.1851,0.2584,0.528
+5,25,gini,"{0: 1, 1: 3.0}",0.0,0.5775,0.1939,0.1993,0.212
+3,20,gini,balanced,0.0,0.5707,0.1692,0.2468,0.5499

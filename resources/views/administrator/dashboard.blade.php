@@ -99,7 +99,7 @@
                     </a>
                     <a href="#caseload-governance-section" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Caseload Assignments ({{ $childrenCount }})
+                        Child &amp; Caseload Oversight ({{ $childrenCount }})
                     </a>
                     <a href="#system-health-panel" class="navlink">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
@@ -224,7 +224,7 @@
                     </a>
                     <a href="#caseload-governance-section" class="inline-flex items-center gap-2 border border-[var(--accent-soft)] bg-white text-[var(--accent)] text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[var(--accent-tint)] transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.5-6 7-6s7 2 7 6"/></svg>
-                        Caseload Assignments ({{ $childrenCount }})
+                        Child &amp; Caseload Oversight ({{ $childrenCount }})
                     </a>
                 </div>
             </section>
@@ -585,14 +585,21 @@
                 </div>
             </section>
 
-            {{-- ===================== CLINICIAN-CHILD CASELOAD ASSIGNMENT GOVERNANCE ===================== --}}
+            {{-- ===================== CLINICIAN-CHILD CASELOAD & PRIVACY-SAFE DATA OVERSIGHT ===================== --}}
             <section id="caseload-governance-section" class="bg-white border border-[var(--line)] rounded-2xl p-5 sm:p-6">
-                <div class="mb-5 pb-4 border-b border-[var(--line)]">
-                    <p class="eyebrow uppercase mb-0.5">Clinical Caseload Governance</p>
-                    <h2 class="text-lg font-bold tracking-tight">Clinician–Child Caseload Assignments ({{ $children->count() }})</h2>
-                    <p class="text-xs text-[var(--ink-soft)] mt-0.5">
-                        Assign or unassign specialist clinicians to registered children so authorized practitioners can record assessments, set therapy goals, and approve progress summaries.
-                    </p>
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5 pb-4 border-b border-[var(--line)]">
+                    <div>
+                        <p class="eyebrow uppercase mb-0.5">Clinical Caseload &amp; Privacy-Safe Data Oversight</p>
+                        <h2 class="text-lg font-bold tracking-tight">Child &amp; Caseload Oversight ({{ $children->count() }})</h2>
+                        <p class="text-xs text-[var(--ink-soft)] mt-0.5">
+                            Assign or unassign specialist clinicians to registered children and monitor record completeness (observation counts, 14-domain assessment readiness, and progress indicator reviews).
+                        </p>
+                    </div>
+
+                    <div class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2 text-xs text-emerald-900 shrink-0">
+                        <svg class="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        <span><strong>Privacy-Safe Governance:</strong> Private clinical notes, caregiver home reflections, and raw assessment scores are hidden from administrators.</span>
+                    </div>
                 </div>
 
                 @if ($children->isNotEmpty())
@@ -602,6 +609,7 @@
                                 <tr class="text-left text-xs text-[var(--ink-soft)] font-semibold border-b border-[var(--line)]">
                                     <th class="py-2.5 px-2">Child Profile</th>
                                     <th class="py-2.5 px-2">Caregiver</th>
+                                    <th class="py-2.5 px-2">Record Completeness (Privacy-Safe)</th>
                                     <th class="py-2.5 px-2">Assigned Clinicians</th>
                                     <th class="py-2.5 px-2 text-right">Assign Specialist Clinician</th>
                                 </tr>
@@ -610,6 +618,13 @@
                                 @foreach ($children as $childItem)
                                     @php
                                         $childPic = $childItem->profilePictureUrl();
+                                        $obsTotal = (int) ($childItem->behavioural_records_count ?? 0);
+                                        $assessedCount = (int) ($childItem->assessed_records_count ?? 0);
+                                        $predTotal = (int) ($childItem->predictions_count ?? 0);
+                                        $validatedPredCount = (int) ($childItem->validated_predictions_count ?? 0);
+                                        $goalsTotal = (int) ($childItem->therapy_goals_count ?? 0);
+                                        $milestonesTotal = (int) ($childItem->milestones_count ?? 0);
+                                        $isAssessmentReady = $assessedCount > 0;
                                     @endphp
                                     <tr class="hover:bg-[var(--canvas)]/50 transition">
                                         <td class="py-3 px-2">
@@ -631,6 +646,29 @@
                                         <td class="py-3 px-2 text-xs">
                                             <p class="font-semibold">{{ $childItem->caregiver->name ?? 'Caregiver' }}</p>
                                             <p class="text-[11px] text-[var(--ink-soft)]">{{ $childItem->caregiver->email ?? '' }}</p>
+                                        </td>
+
+                                        <td class="py-3 px-2">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-[var(--line)] bg-[var(--canvas)] text-[var(--ink)]">
+                                                    <strong>{{ $obsTotal }}</strong> {{ Str::plural('Observation', $obsTotal) }}
+                                                </span>
+
+                                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border {{ $isAssessmentReady ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200' }}">
+                                                    @if ($isAssessmentReady)
+                                                        Assessment Ready ({{ $assessedCount }})
+                                                    @else
+                                                        Assessment Pending
+                                                    @endif
+                                                </span>
+
+                                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border border-[var(--line)] bg-white text-[var(--ink-soft)]">
+                                                    <strong>{{ $predTotal }}</strong> {{ Str::plural('Indicator', $predTotal) }} ({{ $validatedPredCount }} verified)
+                                                </span>
+                                            </div>
+                                            <p class="text-[10.5px] text-[var(--ink-soft)] mt-1">
+                                                Therapy Goals: <strong>{{ $goalsTotal }}</strong> · Milestones: <strong>{{ $milestonesTotal }}</strong> · <span class="italic">Clinical notes &amp; raw scores restricted</span>
+                                            </p>
                                         </td>
 
                                         <td class="py-3 px-2">

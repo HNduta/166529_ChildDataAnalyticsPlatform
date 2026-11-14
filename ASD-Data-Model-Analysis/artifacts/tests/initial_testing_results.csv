@@ -1,0 +1,7 @@
+Test_ID,Test_Name,Condition,Expected,Actual,Status,Corrective_Action
+TC-01,Expected Inference Workflow,Standard valid input record,"Probability in [0, 1]",Probability = 0.736,PASS,None
+TC-02,Boundary Value Extremes,"Age=2, Percentile=0, Success=100%",Safe execution without NaN,Handled safely: p=0.879,PASS,None
+TC-03,Invalid Input Interception,Percentile=150 (out of bounds),ClinicalInputValidationError raised,Caught ClinicalInputValidationError ('Clinical input validation error: Invalid cogn...'),PASS,Verified exception originates from validator
+TC-04,Missing & Novel Categories,NaN percentile + novel category level,Imputed and predicted safely,Handled safely: p=0.445,PASS,Configured SimpleImputer & handle_unknown='ignore'
+TC-05,Data Leakage Independence Assert,GroupShuffleSplit on child_id,0 overlapping children,Strictly 0 overlapping children (0.0% overlap),PASS,Enforced GroupShuffleSplit
+TC-06,Model Serialization & Reload Consistency,Save to .joblib and reload via joblib.load(),p_original == p_reloaded,"p_original=0.7361, p_reloaded=0.7361 (delta = 0.0)",PASS,Verified self-contained pipeline serialization

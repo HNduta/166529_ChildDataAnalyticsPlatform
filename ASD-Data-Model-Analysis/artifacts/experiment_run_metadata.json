@@ -1,0 +1,78 @@
+{
+    "project": "AI-Driven Child Data Analytics Platform for Early Cognitive Support of Children with ASD",
+    "phase": "Model Improvement and Optimization Milestone",
+    "algorithms_evaluated": [
+        "Decision Tree",
+        "Na\u00efve Bayes",
+        "Logistic Regression (Benchmark)"
+    ],
+    "selected_deployment_model": "Optimized Decision Tree (Pruned Depth=5)",
+    "primary_deployment_path": "artifacts/models/child_intervention_pipeline.joblib",
+    "random_seed": 42,
+    "total_records": 1347,
+    "unique_children": 500,
+    "train_children": 400,
+    "test_children": 100,
+    "train_goal_records": 1083,
+    "test_goal_records": 264,
+    "leak_free_split_overlap": 0,
+    "input_features": [
+        "avg_success_first_2",
+        "age_years",
+        "ados2_social_affect",
+        "ados2_rrb",
+        "cognitive_verbal_percentile",
+        "cognitive_nonverbal_percentile",
+        "cognitive_gca_percentile",
+        "adaptive_composite_percentile",
+        "num_current_services",
+        "domain",
+        "gender",
+        "support_level",
+        "primary_domain",
+        "ados2_comparison_score"
+    ],
+    "decision_tree_results": {
+        "baseline": {
+            "test_roc_auc": 0.611,
+            "test_recall": 0.5135,
+            "cv_roc_auc": 0.5826
+        },
+        "optimized": {
+            "test_roc_auc": 0.6442,
+            "test_recall_default_050": 0.6486,
+            "test_recall_screening_040": 0.7297,
+            "cv_roc_auc": 0.6006
+        }
+    },
+    "naive_bayes_results": {
+        "baseline": {
+            "test_roc_auc": 0.6348,
+            "test_pr_auc": 0.2767,
+            "cv_roc_auc": 0.6191
+        },
+        "optimized": {
+            "test_roc_auc": 0.6433,
+            "test_pr_auc": 0.2964,
+            "cv_roc_auc": 0.632
+        }
+    },
+    "test_suite_status": "6 of 6 tests passed (100%)",
+    "artifacts_saved": [
+        "artifacts/models/decision_tree_pipeline.joblib",
+        "artifacts/models/naive_bayes_pipeline.joblib",
+        "artifacts/models/child_intervention_pipeline.joblib",
+        "artifacts/metrics/model_comparison_metrics.csv",
+        "artifacts/metrics/dt_hyperparameter_tuning.csv",
+        "artifacts/metrics/nb_variants_comparison.csv",
+        "artifacts/plots/class_distribution.png",
+        "artifacts/plots/roc_curves.png",
+        "artifacts/plots/precision_recall_curves.png",
+        "artifacts/plots/confusion_matrices.png",
+        "artifacts/plots/decision_tree_structure.png",
+        "artifacts/plots/feature_importances.png",
+        "artifacts/plots/threshold_tradeoffs.png",
+        "artifacts/predictions/test_set_predictions.csv",
+        "artifacts/tests/initial_testing_results.csv"
+    ]
+}
