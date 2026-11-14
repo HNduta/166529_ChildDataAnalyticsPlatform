@@ -3,16 +3,16 @@
     <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
 
         {{-- ===================== LEFT: BRAND PANEL ===================== --}}
-        <div class="hidden lg:flex flex-col px-14 py-12 border-r border-[var(--line)]">
+        <div class="hidden lg:flex flex-col px-12 xl:px-16 py-12 border-r border-[var(--line)] bg-[var(--canvas)]">
 
             {{-- AutiSync Brand --}}
-            <div class="flex items-center gap-2 mb-10">
+            <div class="flex items-center gap-2.5 mb-10">
                 <div class="w-8 h-8 rounded-lg bg-[var(--ink)] flex items-center justify-center text-white text-sm font-bold">
                     A
                 </div>
 
                 <div class="leading-tight">
-                    <span class="text-[15px] font-bold tracking-tight">
+                    <span class="text-[15px] font-bold tracking-tight text-[var(--ink)]">
                         AutiSync
                     </span>
 
@@ -22,21 +22,19 @@
                 </div>
             </div>
 
-            {{-- Introduction --}}
-            <h1 class="text-[34px] leading-[1.15] font-extrabold tracking-tight max-w-md mb-4">
-                Advanced Insights for Developmental Growth.
+            {{-- Introduction (Expanded width to comfortably occupy horizontal canvas space) --}}
+            <h1 class="text-[32px] xl:text-[36px] leading-[1.2] font-extrabold tracking-tight max-w-2xl mb-4 text-[var(--ink)]">
+                Navigating our journey, together.
             </h1>
 
-            <p class="text-[var(--ink-soft)] text-sm max-w-sm mb-8">
-                Empowering caregivers and clinicians with AI-based behavioural
-                analytics to support children on the Autism Spectrum.
-                Professional, secure, and compassionate.
+            <p class="text-[var(--ink-soft)] text-sm sm:text-[15px] leading-relaxed max-w-2xl mb-8">
+                Join a secure, compassionate space where caregivers and specialists collaborate. Track daily milestones, uncover hidden patterns, and unlock personalized support for children on the Autism Spectrum.
             </p>
 
-            {{-- Key Features --}}
-            <ul class="space-y-3 mb-10">
+            {{-- Key Features (Clean Checkmark Design) --}}
+            <ul class="space-y-3.5 mb-10">
 
-                <li class="flex items-center gap-2.5 text-sm font-medium">
+                <li class="flex items-center gap-2.5 text-sm font-medium text-[var(--ink)]">
                     <svg class="w-4 h-4 shrink-0 text-[var(--ink)]"
                          fill="none"
                          stroke="currentColor"
@@ -47,10 +45,10 @@
                         <path d="M9 12l2 2 4-4"/>
                     </svg>
 
-                    Secure Data Handling &amp; Privacy
+                    Your Child’s Data, Kept Strictly Private
                 </li>
 
-                <li class="flex items-center gap-2.5 text-sm font-medium">
+                <li class="flex items-center gap-2.5 text-sm font-medium text-[var(--ink)]">
                     <svg class="w-4 h-4 shrink-0 text-[var(--ink)]"
                          fill="none"
                          stroke="currentColor"
@@ -61,27 +59,26 @@
                         <path d="M9 12l2 2 4-4"/>
                     </svg>
 
-                    Evidence-Based AI Insights
+                    Smart, Personalized Daily Support
                 </li>
 
-                <li class="flex items-center gap-2.5 text-sm font-medium">
+                <li class="flex items-center gap-2.5 text-sm font-medium text-[var(--ink)]">
                     <svg class="w-4 h-4 shrink-0 text-[var(--ink)]"
                          fill="none"
                          stroke="currentColor"
                          stroke-width="2"
                          viewBox="0 0 24 24"
                          aria-hidden="true">
-                        <path d="M9 3a4 4 0 014 4v10a4 4 0 01-4 4"/>
-                        <path d="M15 3a4 4 0 00-4 4v10a4 4 0 004 4"/>
-                        <path d="M9 8h6M9 16h6"/>
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M9 12l2 2 4-4"/>
                     </svg>
 
-                    Collaborative Care Ecosystem
+                    Seamless Caregiver &amp; Clinician Teamwork
                 </li>
 
             </ul>
 
-            {{-- User-Supplied Registration Image or Clearly Identified Placeholder --}}
+            {{-- User-Supplied Registration Image --}}
             @php
                 $registerImageCandidates = [
                     'images/auth/register.png',
@@ -133,8 +130,7 @@
 
             {{-- Footer --}}
             <p class="text-[12px] text-[var(--ink-soft)] mt-8">
-                &copy; {{ date('Y') }} AutiSync Analytics.
-                All rights reserved.
+                &copy; {{ date('Y') }} AutiSync Analytics. All rights reserved.
             </p>
 
         </div>
@@ -174,12 +170,12 @@
                 </div>
 
                 {{-- Heading --}}
-                <h2 class="text-2xl font-extrabold tracking-tight mb-1.5">
-                    Create Account
+                <h2 class="text-2xl sm:text-[26px] font-extrabold tracking-tight mb-2 text-[var(--ink)]">
+                    Join AutiSync
                 </h2>
 
-                <p class="text-sm text-[var(--ink-soft)] mb-6">
-                    Set up caregiver access to start logging observations and tracking progress.
+                <p class="text-sm text-[var(--ink-soft)] leading-relaxed mb-6">
+                    Create your account to start logging daily observations, tracking progress, or managing your clinical caseload.
                 </p>
 
 
