@@ -47,6 +47,14 @@ class AdministratorDashboardController extends Controller
 
         $children = Child::query()
             ->with(['caregiver', 'clinicians'])
+            ->withCount([
+                'behaviouralRecords',
+                'behaviouralRecords as assessed_records_count' => fn ($query) => $query->whereNotNull('ml_assessment_inputs'),
+                'predictions',
+                'predictions as validated_predictions_count' => fn ($query) => $query->where('validated_by_clinician', true),
+                'therapyGoals',
+                'milestones',
+            ])
             ->latest()
             ->get();
 

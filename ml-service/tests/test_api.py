@@ -111,7 +111,12 @@ def test_saved_pipeline_structure_and_leakage_safe_preprocessing():
     assert int(num_transformer.named_steps["scaler"].n_samples_seen_) == 1083
     assert len(prep.feature_names_in_) == 14
 
-    # Verify binary classes [0, 1] and balanced class weighting for minority class protection
+    # Verify binary classes [0, 1] and the selected Optimized Pruned Decision Tree configuration
+    from sklearn.tree import DecisionTreeClassifier
+
+    assert isinstance(clf, DecisionTreeClassifier)
     assert list(clf.classes_) == [0, 1]
+    assert clf.max_depth == 5
+    assert clf.min_samples_leaf == 20
     assert clf.class_weight == "balanced"
 

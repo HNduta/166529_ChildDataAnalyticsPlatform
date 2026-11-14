@@ -1100,5 +1100,91 @@ class BehaviouralAnalyticsDataTest extends TestCase
             ->assertSessionHas('success');
         $this->assertFalse($child->clinicians()->where('users.id', $clinician->id)->exists());
     }
+
+    public function test_administrator_child_and_caseload_oversight_displays_completeness_without_exposing_private_clinical_notes(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'Oversight Admin',
+            'email' => 'oversight@autisync.test',
+            'role' => 'administrator',
+        ]);
+        $caregiver = User::factory()->create([
+            'name' => 'Mary Caregiver',
+            'email' => 'mary@autisync.test',
+            'role' => 'caregiver',
+        ]);
+        $clinician = User::factory()->create([
+            'name' => 'Dr. Otieno',
+            'email' => 'otieno@autisync.test',
+            'role' => 'clinician',
+        ]);
+        $child = Child::create([
+            'caregiver_id' => $caregiver->id,
+            'first_name' => 'Zawadi',
+            'age_in_months' => 48,
+            'sex' => 'Female',
+            'born_with_jaundice' => false,
+            'family_member_with_asd' => false,
+            'diagnosis_confirmed' => true,
+        ]);
+        $child->clinicians()->syncWithoutDetaching([$clinician->id]);
+
+        $record = $child->behaviouralRecords()->create([
+            'caregiver_id' => $caregiver->id,
+            'observation_date' => '2026-11-08',
+            'communication_score' => 8,
+            'social_interaction_score' => 7,
+            'engagement_level' => 8,
+            'repetitive_behaviour_score' => 2,
+            'session_duration_minutes' => 35,
+            'success_rate' => 78.0,
+            'notes' => 'CONFIDENTIAL_CAREGIVER_REFLECTION_DO_NOT_EXPOSE_TO_ADMIN',
+            'ml_assessment_inputs' => [
+                'avg_success_first_2' => 78.0,
+                'age_years' => 4.0,
+                'ados2_social_affect' => 7.0,
+                'ados2_rrb' => 2.0,
+                'cognitive_verbal_percentile' => 60.0,
+                'cognitive_nonverbal_percentile' => 65.0,
+                'cognitive_gca_percentile' => 62.0,
+                'adaptive_composite_percentile' => 58.0,
+                'num_current_services' => 2,
+                'domain' => 'communication',
+                'gender' => 'female',
+                'support_level' => 'mild',
+                'primary_domain' => 'social',
+                'ados2_comparison_score' => 'mild',
+            ],
+        ]);
+
+        $record->predictions()->create([
+            'child_id' => $child->id,
+            'model_used' => 'child_intervention_pipeline',
+            'predicted_outcome' => '0',
+            'confidence_score' => 0.85,
+            'date_generated' => now(),
+            'validated_by_clinician' => true,
+            'clinician_notes' => 'CONFIDENTIAL_CLINICIAN_VALIDATION_NOTE_DO_NOT_EXPOSE_TO_ADMIN',
+        ]);
+
+        Http::fake([
+            '*/health' => Http::response([
+                'status' => 'healthy',
+                'model_loaded' => true,
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('administrator.dashboard'));
+        $response->assertStatus(200);
+        $response->assertSee('Child &amp; Caseload Oversight', false);
+        $response->assertSee('Record Completeness (Privacy-Safe)', false);
+        $response->assertSee('Assessment Ready (1)', false);
+        $response->assertSee('1 verified', false);
+        $response->assertSee('Clinical notes &amp; raw scores restricted', false);
+
+        // Ensure confidential clinical/caregiver notes are never rendered on the Administrator Dashboard
+        $response->assertDontSee('CONFIDENTIAL_CAREGIVER_REFLECTION_DO_NOT_EXPOSE_TO_ADMIN', false);
+        $response->assertDontSee('CONFIDENTIAL_CLINICIAN_VALIDATION_NOTE_DO_NOT_EXPOSE_TO_ADMIN', false);
+    }
 }
 
