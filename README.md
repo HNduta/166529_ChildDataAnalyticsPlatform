@@ -1,4 +1,4 @@
-# AutiSync — Child Data Analytics Platform
+# Child Data Analytics Platform
 
 ML-assisted early cognitive and developmental support platform for children with Autism Spectrum Disorder (ASD). Final-year Computer Science project.
 
